@@ -216,7 +216,7 @@ except Exception as e:
 }
 
 generate_fallback_data() {
-    # ...existing code...
+    datasets_dir = '$datasets_dir'
     log_info "A gerar dados de fallback para teste..."
     mkdir -p "$datasets_dir"
     python3 -c "
@@ -234,22 +234,7 @@ if y.sum() == 0 or y.sum() == len(y):
     # Forçar pelo menos um exemplo da classe oposta
     y[0] = 1 - y[0]
 
-    python3 -c "
-import numpy as np
-import json
-import os
-
-print('A gerar dados sintéticos para teste...')
-np.random.seed(42)
-X = np.random.randn(5000, 20)
-y = (X[:, 0] + X[:, 1] + np.random.randn(5000) * 0.1) > 0
-y = y.astype(int)
-# Garantir que existem pelo menos duas classes
-if y.sum() == 0 or y.sum() == len(y):
-    # Forçar pelo menos um exemplo da classe oposta
-    y[0] = 1 - y[0]
-
-    log_success "Sistema iniciado"
+datasets_dir = '$datasets_dir'
 np.save(f'{datasets_dir}/X_integrated_real.npy', X)
 np.save(f'{datasets_dir}/y_integrated_real.npy', y)
 
@@ -268,13 +253,6 @@ with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
 print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
-}
-
-show_instructions() {
-    log_step "Sistema pronto!"
-
-    echo ""
-    echo -e "${GREEN}${BOLD}Laboratório de Deteção e Mitigação de DDoS em execução!${NC}"
     echo ""
     # Obter IP da máquina
     IP_MAQUINA=$(hostname -I | awk '{print $1}')
