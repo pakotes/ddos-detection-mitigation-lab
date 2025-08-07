@@ -276,9 +276,11 @@ show_instructions() {
     echo ""
     echo -e "${GREEN}${BOLD}Laboratório de Deteção e Mitigação de DDoS em execução!${NC}"
     echo ""
+    # Obter IP da máquina
+    IP_MAQUINA=$(hostname -I | awk '{print $1}')
     echo -e "${CYAN}Dashboards disponíveis:${NC}"
-    echo "   Grafana:    http://localhost:3000 (admin/admin123)"
-    echo "   Prometheus: http://localhost:9090"
+    echo "   Grafana:    http://$IP_MAQUINA:3000 (admin/admin123)"
+    echo "   Prometheus: http://$IP_MAQUINA:9090"
     echo ""
     echo -e "${CYAN}Comandos úteis:${NC}"
     echo "   ./deployment/scripts/make.sh status    # Ver estado"
