@@ -222,6 +222,9 @@ generate_fallback_data() {
 
     python3 -c "
 import numpy as np
+np.save(f'{datasets_dir}/y_integrated_real.npy', y.astype(int))
+    python3 -c "
+import numpy as np
 import json
 import os
 
@@ -229,10 +232,15 @@ print('A gerar dados sintéticos para teste...')
 np.random.seed(42)
 X = np.random.randn(5000, 20)
 y = (X[:, 0] + X[:, 1] + np.random.randn(5000) * 0.1) > 0
+y = y.astype(int)
+# Garantir que existem pelo menos duas classes
+if y.sum() == 0 or y.sum() == len(y):
+    # Forçar pelo menos um exemplo da classe oposta
+    y[0] = 1 - y[0]
 
-datasets_dir = '$datasets_dir'
+}
 np.save(f'{datasets_dir}/X_integrated_real.npy', X)
-np.save(f'{datasets_dir}/y_integrated_real.npy', y.astype(int))
+np.save(f'{datasets_dir}/y_integrated_real.npy', y)
 
 # Metadata
 metadata = {
@@ -249,9 +257,6 @@ with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
 print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
-    log_success "Dados de fallback gerados"
-    log_warning "IMPORTANTE: Substitua por datasets reais colocando-os manualmente nas pastas indicadas em setup/dataset-preparation. Consulte o ficheiro DATASET_SOURCES.md para instruções."
-}
 
 start_system() {
     log_step "A iniciar o sistema DDoS"
