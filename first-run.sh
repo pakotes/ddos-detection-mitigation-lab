@@ -219,10 +219,6 @@ generate_fallback_data() {
     # ...existing code...
     log_info "A gerar dados de fallback para teste..."
     mkdir -p "$datasets_dir"
-
-    python3 -c "
-import numpy as np
-np.save(f'{datasets_dir}/y_integrated_real.npy', y.astype(int))
     python3 -c "
 import numpy as np
 import json
@@ -238,7 +234,7 @@ if y.sum() == 0 or y.sum() == len(y):
     # Forçar pelo menos um exemplo da classe oposta
     y[0] = 1 - y[0]
 
-}
+"
 np.save(f'{datasets_dir}/X_integrated_real.npy', X)
 np.save(f'{datasets_dir}/y_integrated_real.npy', y)
 
