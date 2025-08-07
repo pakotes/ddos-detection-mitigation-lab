@@ -253,6 +253,10 @@ with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
 print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
+}
+
+# Função para mostrar instruções finais
+show_instructions() {
     echo ""
     # Obter IP da máquina
     IP_MAQUINA=$(hostname -I | awk '{print $1}')
