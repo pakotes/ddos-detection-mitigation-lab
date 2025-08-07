@@ -268,15 +268,29 @@ def main():
     """Ponto de entrada principal para o pipeline de preparação de conjuntos de dados"""
     try:
         pipeline = DatasetPreparationPipeline()
+        # Suporte ao argumento --check
+        if len(sys.argv) > 1 and sys.argv[1] == "--check":
+            print("Modo de verificação de instalação dos datasets (--check)")
+            available = pipeline.check_dataset_availability()
+            if not available:
+                print("Nenhum conjunto de dados encontrado para processamento.")
+                print("Por favor, certifique-se de que os conjuntos de dados estão colocados nos diretórios corretos:")
+                print(f"  - NF-UNSW-NB15-v3: {pipeline.script_dir / 'NF-UNSW-NB15-v3'}")
+                print(f"  - CIC-DDoS2019: {pipeline.script_dir / 'CIC-DDoS2019'}")
+                return 1
+            print(f"Encontrados {len(available)} conjunto(s) de dados para processamento:")
+            for name, info in available.items():
+                print(f"  - {name}: {info['files']} ficheiros - {info['description']}")
+            print("\nValidação concluída. Os datasets estão prontos para processamento.")
+            return 0
+        # Execução normal
         success = pipeline.execute_pipeline()
-        
         if success:
             logger.info("Pipeline de preparação de conjuntos de dados completado com sucesso")
             return 0
         else:
             logger.error("Pipeline de preparação de conjuntos de dados falhado")
             return 1
-            
     except KeyboardInterrupt:
         print("\nProcessamento interrompido pelo utilizador")
         logger.info("Processamento interrompido pelo utilizador")
