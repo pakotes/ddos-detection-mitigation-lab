@@ -25,7 +25,12 @@ log_info() {
 }
 
 log_success() {
-    echo -e "${GREEN}[OK]${NC} $1" | tee -a "$LOG_FILE"
+    # Substituir mensagem padrão se for a mensagem de sistema pronto
+    if [[ "$1" == "DDoS Detection System ready" ]]; then
+        echo -e "${GREEN}Sistema pronto${NC}" | tee -a "$LOG_FILE"
+    else
+        echo -e "${GREEN}[OK]${NC} $1" | tee -a "$LOG_FILE"
+    fi
 }
 
 log_warning() {
@@ -268,19 +273,18 @@ show_instructions() {
     log_step "Sistema Pronto!"
     
     echo ""
-    echo -e "${GREEN}${BOLD}✅ DDoS Mitigation Lab está rodando!${NC}"
+    echo -e "${GREEN}${BOLD}Laboratório de DDoS Detection & Mitigation em execução!${NC}"
     echo ""
-    echo -e "${CYAN}📊 Dashboards disponíveis:${NC}"
+    echo -e "${CYAN}Dashboards disponíveis:${NC}"
     echo "   Grafana:    http://localhost:3000 (admin/admin123)"
     echo "   Prometheus: http://localhost:9090"
     echo ""
-    echo -e "${CYAN}🔧 Comandos úteis:${NC}"
+    echo -e "${CYAN}Comandos úteis:${NC}"
     echo "   ./deployment/scripts/make.sh status    # Ver status"
     echo "   ./deployment/scripts/make.sh logs      # Ver logs"
     echo "   ./deployment/scripts/make.sh down      # Parar sistema"
     echo "   ./deployment/scripts/make.sh help      # Ajuda completa"
     echo ""
-    
     if [ -f "$HOME/.ddos_aliases" ]; then
         echo -e "${CYAN}Aliases disponíveis (após 'source ~/.bashrc'):${NC}"
         echo "   ddos-up         # Iniciar"
@@ -304,8 +308,7 @@ show_instructions() {
         echo "   ddos-analyze    # Analisar resultados"
         echo ""
     fi
-    
-    echo -e "${GREEN}${BOLD}🚀 Próximo passo recomendado:${NC}"
+    echo -e "${GREEN}${BOLD}Proximo passo recomendado:${NC}"
     echo "   1. source ~/.bashrc         # Ativar aliases"
     echo "   2. ddos-train-clean         # Treinar modelos (rápido!)"
     echo ""
