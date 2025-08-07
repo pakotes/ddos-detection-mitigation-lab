@@ -7,7 +7,6 @@ configurações híbridas para análise abrangente de segurança de rede.
 Suporta várias estratégias de integração incluindo aprendizagem ensemble,
 conjuntos de dados combinados e configurações de conjuntos de dados individuais.
 
-Autor: DDoS Mitigation Lab
 """
 
 import numpy as np

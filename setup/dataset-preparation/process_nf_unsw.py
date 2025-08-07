@@ -7,7 +7,6 @@ detecção geral de intrusões. Trata do carregamento de dados, pré-processamen
 engenharia de características e guarda os dados processados para uso em
 modelos de aprendizagem automática.
 
-Autor: DDoS Mitigation Lab
 """
 
 import pandas as pd

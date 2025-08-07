@@ -6,7 +6,6 @@ Este módulo orquestra o processo completo de preparação de conjuntos de dados
 para o DDoS Mitigation Lab. Coordena o processamento de conjuntos de dados 
 individuais e a sua integração em múltiplas configurações de treino.
 
-Autor: DDoS Mitigation Lab
 """
 
 import sys
@@ -79,27 +78,31 @@ class DatasetPreparationPipeline:
         return available_datasets
     
     def run_processor(self, processor_name, script_path):
-        """Executar um script de processamento de conjunto de dados"""
+        """Executar um script de processamento de conjunto de dados, mostrando o progresso em tempo real."""
         logger.info(f"A iniciar processador {processor_name}")
-        
         try:
-            # Executar o script de processamento
-            result = subprocess.run(
+            process = subprocess.Popen(
                 [sys.executable, str(script_path)],
-                capture_output=True,
+                cwd=self.script_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                cwd=self.script_dir
+                bufsize=1
             )
-            
-            if result.returncode == 0:
+            # Mostrar a saída em tempo real
+            while True:
+                line = process.stdout.readline()
+                if not line and process.poll() is not None:
+                    break
+                if line:
+                    print(line, end='')
+            returncode = process.wait()
+            if returncode == 0:
                 logger.info(f"Processador {processor_name} completado com sucesso")
                 return True
             else:
-                logger.error(f"Processador {processor_name} falhou")
-                logger.error(f"STDOUT: {result.stdout}")
-                logger.error(f"STDERR: {result.stderr}")
+                logger.error(f"Processador {processor_name} falhou (return code {returncode})")
                 return False
-                
         except Exception as e:
             logger.error(f"Error running {processor_name} processor: {str(e)}")
             return False

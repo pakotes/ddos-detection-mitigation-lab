@@ -2,6 +2,7 @@
 
 Sistema completo de preparação de conjuntos de dados para o DDoS Mitigation Lab. Este sistema inclui tanto os conjuntos de dados brutos como as ferramentas de processamento numa localização organizada.
 
+
 ## Visão Geral do Sistema
 
 Este diretório contém:
@@ -9,6 +10,29 @@ Este diretório contém:
 - **Scripts de processamento**: Processadores profissionais de conjuntos de dados
 - **Ferramentas de integração**: Geradores de configuração multi-conjunto de dados
 - **Documentação**: Guias completos de configuração e utilização
+
+## Fontes e Instruções de Download dos Conjuntos de Dados
+
+> **Nota:** As instruções detalhadas de download manual, fontes académicas, citações e estrutura de diretórios dos datasets estão documentadas em [`DATASET_SOURCES.md`](./DATASET_SOURCES.md).
+
+Antes de executar qualquer processamento, é obrigatório efetuar o download manual dos datasets originais e colocá-los nas localizações corretas, conforme descrito nesse documento.
+
+**Resumo do procedimento:**
+
+1. Consulte o ficheiro [`DATASET_SOURCES.md`](./DATASET_SOURCES.md) para obter os links oficiais, instruções de registo/download e estrutura de pastas esperada.
+2. Faça o download manual dos ficheiros ZIP dos datasets (CIC-DDoS2019 e NF-UNSW-NB15-v3) a partir das fontes oficiais ou alternativas (Kaggle).
+3. Extraia os ficheiros para as pastas indicadas:
+   - `setup/dataset-preparation/CIC-DDoS2019/`
+   - `setup/dataset-preparation/NF-UNSW-NB15-v3/`
+4. Verifique a estrutura de diretórios e a presença dos ficheiros CSV conforme indicado.
+5. Após o download e extração, pode validar a instalação executando:
+
+   ```bash
+   cd setup/dataset-preparation
+   python3 prepare_datasets.py --check
+   ```
+
+O sistema irá detetar automaticamente os datasets disponíveis e reportar o estado da instalação.
 
 ## Estrutura do Diretório
 

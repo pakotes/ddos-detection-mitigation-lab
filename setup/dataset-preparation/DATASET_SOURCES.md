@@ -115,7 +115,7 @@ Após o download e extracção, verifique a instalação executando:
 
 ```bash
 cd setup/dataset-preparation
-python prepare_datasets.py --check
+python3 prepare_datasets.py --check
 ```
 
 O sistema deve detectar:

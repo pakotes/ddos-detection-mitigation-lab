@@ -10,7 +10,6 @@ de grandes conjuntos de dados.
 O processador trata especificamente da inclusão de dados de tráfego BENIGN
 que é essencial para treino realista de modelos de detecção de DDoS.
 
-Autor: DDoS Mitigation Lab
 """
 
 import pandas as pd
