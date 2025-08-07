@@ -22,6 +22,57 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import logging
 import gc
 
+# Diagnóstico automático de headers dos CSV do CIC-DDoS2019
+def diagnosticar_headers_csv(input_dir=None):
+    """
+    Diagnostica headers dos ficheiros CSV no diretório CIC-DDoS2019.
+    Lista headers únicos e associa cada ficheiro ao respetivo header.
+    Sinaliza ficheiros com headers diferentes.
+    """
+    from collections import defaultdict
+    import pandas as pd
+    from pathlib import Path
+
+    if input_dir is None:
+        input_dir = Path(__file__).parent / "CIC-DDoS2019"
+    else:
+        input_dir = Path(input_dir)
+
+    # Encontrar todos os CSV
+    csv_files = []
+    for subdir in input_dir.iterdir():
+        if subdir.is_dir():
+            csv_files.extend(list(subdir.glob("*.csv")))
+    csv_files.extend(list(input_dir.glob("*.csv")))
+
+    if not csv_files:
+        print(f"[Diagnóstico] Não foram encontrados ficheiros CSV em {input_dir}")
+        return
+
+    headers_dict = defaultdict(list)
+    for f in csv_files:
+        try:
+            df = pd.read_csv(f, nrows=1, low_memory=False)
+            header_tuple = tuple([c.strip() for c in df.columns])
+            headers_dict[header_tuple].append(str(f))
+        except Exception as e:
+            print(f"[Diagnóstico] Erro ao ler {f}: {e}")
+
+    print("\n[Diagnóstico] Headers únicos encontrados nos CSV:")
+    for idx, (header, files) in enumerate(headers_dict.items(), 1):
+        print(f"\nHeader #{idx} (ocorrências: {len(files)}):")
+        print(f"  Colunas: {header}")
+        print("  Ficheiros:")
+        for file in files:
+            print(f"    - {file}")
+
+    if len(headers_dict) > 1:
+        print("\n[Diagnóstico] AVISO: Foram encontrados múltiplos headers diferentes! Recomenda-se corrigir/remover os ficheiros problemáticos antes de processar o dataset.")
+    else:
+        print("\n[Diagnóstico] Todos os ficheiros CSV têm o mesmo header. Pronto para processamento.")
+
+    print("\n[Diagnóstico] Fim do diagnóstico de headers.\n")
+
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -284,6 +335,11 @@ def main():
         return False
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--diagnostico":
+        print("Diagnóstico automático de headers dos CSV do CIC-DDoS2019\n" + "="*60)
+        diagnosticar_headers_csv()
+        exit(0)
     success = main()
     if not success:
         exit(1)
