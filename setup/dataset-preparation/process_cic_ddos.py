@@ -166,94 +166,117 @@ class CICDDoSProcessor:
         return label_col, numeric_features
     
     def process_chunk(self, chunk, label_col, numeric_features):
-        """Process a single data chunk"""
+        """Processa um chunk de dados, ignorando linhas não numéricas ou headers duplicados, e garantindo sempre as mesmas colunas."""
         if chunk.empty:
             return None, None
-        
-        # Extract labels
+
+        # Detetar e remover headers duplicados (linhas iguais ao header original)
+        header_set = set(chunk.columns)
+        mask_header = chunk.apply(lambda row: set(str(x).strip() for x in row) == header_set, axis=1)
+        n_headers_duplicados = mask_header.sum()
+        if n_headers_duplicados > 0:
+            chunk = chunk[~mask_header]
+
+        # Garantir que todas as colunas numéricas existem (mesmo que estejam em falta neste chunk)
+        for col in numeric_features:
+            if col not in chunk.columns:
+                chunk[col] = np.nan
+
+        # Converter colunas numéricas, forçando erros a NaN, e garantir ordem das colunas
+        X_chunk = chunk[numeric_features].apply(pd.to_numeric, errors='coerce')
+        X_chunk = X_chunk[numeric_features]  # garantir ordem
+        linhas_invalidas = X_chunk.isnull().all(axis=1)
+        n_linhas_invalidas = linhas_invalidas.sum()
+        if n_linhas_invalidas > 0:
+            chunk = chunk[~linhas_invalidas]
+            X_chunk = X_chunk[~linhas_invalidas]
+
+        # Se não restam linhas válidas
+        if chunk.empty or X_chunk.empty:
+            logger.warning("Chunk vazio após remoção de linhas inválidas/headers duplicados.")
+            return None, None
+
+        # Extrair labels (apenas das linhas válidas)
         labels = chunk[label_col]
-        
-        # Convert to binary classification (BENIGN = 0, Attack = 1)
         is_benign = labels.astype(str).str.upper() == 'BENIGN'
         y_binary = (~is_benign).astype(int)
-        
-        # Extract numeric features
-        X_chunk = chunk[numeric_features].copy()
-        
+
         # Data cleaning
         X_chunk = X_chunk.replace([np.inf, -np.inf], np.nan)
         X_chunk = X_chunk.fillna(X_chunk.median())
-        
-        # Remove features with zero variance
-        feature_variance = X_chunk.var()
-        valid_features = feature_variance[feature_variance > 0].index
-        X_chunk = X_chunk[valid_features]
-        
+
+        # Logging do que foi removido
+        if n_headers_duplicados > 0 or n_linhas_invalidas > 0:
+            logger.warning(f"Chunk: {n_headers_duplicados} headers duplicados e {n_linhas_invalidas} linhas não numéricas removidas.")
+
         return X_chunk.values, y_binary.values
     
     def load_and_preprocess(self):
-        """Load and preprocess the complete CIC-DDoS2019 dataset"""
+        """Load and preprocess the complete CIC-DDoS2019 dataset, garantindo sempre as mesmas colunas."""
         logger.info("Starting CIC-DDoS2019 dataset processing")
-        
+
         # Find all CSV files
         csv_files = self.find_csv_files()
-        
+
         # Analyze data structure
         label_col, numeric_features = self.analyze_data_structure(csv_files)
-        
+
         # Process all files
         all_X_batches = []
         all_y_batches = []
         total_samples = 0
-        
+
         for file_idx, csv_file in enumerate(csv_files):
             logger.info(f"Processing file {file_idx + 1}/{len(csv_files)}: {csv_file.name}")
-            
+
             try:
                 # Process file in chunks for memory efficiency
                 chunk_reader = pd.read_csv(csv_file, chunksize=self.batch_size, low_memory=False)
-                
+
                 for chunk_idx, chunk in enumerate(chunk_reader):
                     X_chunk, y_chunk = self.process_chunk(chunk, label_col, numeric_features)
-                    
+
                     if X_chunk is not None:
                         all_X_batches.append(X_chunk)
                         all_y_batches.append(y_chunk)
                         total_samples += len(chunk)
-                    
+
                     if (chunk_idx + 1) % 10 == 0:
                         logger.info(f"  Processed {(chunk_idx + 1) * self.batch_size:,} rows")
-                        
+
             except Exception as e:
                 logger.warning(f"Error processing {csv_file.name}: {str(e)}")
                 continue
-        
+
         if not all_X_batches:
             raise ValueError("No valid data was processed from any file")
-        
+
         # Combine all processed batches
         logger.info("Combining all processed data")
         X_final = np.vstack(all_X_batches)
         y_final = np.concatenate(all_y_batches)
-        
-        # Get final feature names (from last valid chunk)
-        final_features = numeric_features
-        
+
+        # Remover features com variância zero apenas no final
+        feature_variance = np.var(X_final, axis=0)
+        valid_features_idx = np.where(feature_variance > 0)[0]
+        X_final = X_final[:, valid_features_idx]
+        final_features = [numeric_features[i] for i in valid_features_idx]
+
         # Calculate statistics
         benign_count = (y_final == 0).sum()
         attack_count = (y_final == 1).sum()
         attack_ratio = attack_count / len(y_final)
-        
+
         logger.info(f"Dataset processing complete:")
         logger.info(f"  Total samples: {len(y_final):,}")
         logger.info(f"  Features: {X_final.shape[1]}")
         logger.info(f"  BENIGN samples: {benign_count:,} ({(1-attack_ratio)*100:.1f}%)")
         logger.info(f"  Attack samples: {attack_count:,} ({attack_ratio*100:.1f}%)")
-        
+
         # Memory cleanup
         del all_X_batches, all_y_batches
         gc.collect()
-        
+
         return X_final, y_final, final_features
     
     def save_processed_data(self, X, y, feature_names):
