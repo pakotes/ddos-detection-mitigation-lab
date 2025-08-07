@@ -348,7 +348,7 @@ main() {
     # Iniciar sistema (substitui start_system)
     log_step "A iniciar o sistema (docker compose up)"
     if [ -f "$PROJECT_ROOT/deployment/scripts/make.sh" ]; then
-        bash "$PROJECT_ROOT/deployment/scripts/make.sh" up > /dev/null 2>&1 || log_warning "Falha ao iniciar o sistema. Verifique logs."
+        bash "$PROJECT_ROOT/deployment/scripts/make.sh" up || log_warning "Falha ao iniciar o sistema. Verifique logs."
     else
         log_warning "Script de arranque não encontrado: $PROJECT_ROOT/deployment/scripts/make.sh"
     fi
