@@ -216,7 +216,7 @@ except Exception as e:
 }
 
 generate_fallback_data() {
-datasets_dir = '$datasets_dir'
+    # ...existing code...
     log_info "A gerar dados de fallback para teste..."
     mkdir -p "$datasets_dir"
 
