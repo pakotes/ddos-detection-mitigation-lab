@@ -216,13 +216,9 @@ except Exception as e:
 }
 
 generate_fallback_data() {
-datasets_dir = '$datasets_dir'
+    # variável datasets_dir já definida no contexto bash
     log_info "A gerar dados de fallback para teste..."
     mkdir -p "$datasets_dir"
-
-    python3 -c "
-import numpy as np
-np.save(f'{datasets_dir}/y_integrated_real.npy', y.astype(int))
     python3 -c "
 import numpy as np
 import json
@@ -233,11 +229,12 @@ np.random.seed(42)
 X = np.random.randn(5000, 20)
 y = (X[:, 0] + X[:, 1] + np.random.randn(5000) * 0.1) > 0
 y = y.astype(int)
-# Garantir pelo menos duas classes
+# Garantir que existem pelo menos duas classes
 if y.sum() == 0 or y.sum() == len(y):
+    # Forçar pelo menos um exemplo da classe oposta
     y[0] = 1 - y[0]
 
-}
+datasets_dir = '$datasets_dir'
 np.save(f'{datasets_dir}/X_integrated_real.npy', X)
 np.save(f'{datasets_dir}/y_integrated_real.npy', y)
 
@@ -256,30 +253,6 @@ with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
 print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
-}
-
-start_system() {
-    log_step "A iniciar o sistema DDoS"
-    
-    cd "$PROJECT_ROOT"
-    
-    # Tornar make.sh executável
-    chmod +x deployment/scripts/make.sh
-
-    # Definir variável para modo silencioso
-    export DDOS_FIRST_RUN=true
-
-    # Iniciar sistema
-    ./deployment/scripts/make.sh up
-
-    log_success "Sistema iniciado"
-}
-
-show_instructions() {
-    log_step "Sistema pronto!"
-
-    echo ""
-    echo -e "${GREEN}${BOLD}Laboratório de Deteção e Mitigação de DDoS em execução!${NC}"
     echo ""
     # Obter IP da máquina
     IP_MAQUINA=$(hostname -I | awk '{print $1}')
@@ -368,7 +341,13 @@ main() {
     # Executar passos
     create_aliases
     check_datasets
-    start_system
+    # Iniciar sistema (substitui start_system)
+    log_step "A iniciar o sistema (docker compose up)"
+    if [ -f "$PROJECT_ROOT/deployment/scripts/make.sh" ]; then
+        bash "$PROJECT_ROOT/deployment/scripts/make.sh" up || log_warning "Falha ao iniciar o sistema. Verifique logs."
+    else
+        log_warning "Script de arranque não encontrado: $PROJECT_ROOT/deployment/scripts/make.sh"
+    fi
     show_instructions
 }
 
