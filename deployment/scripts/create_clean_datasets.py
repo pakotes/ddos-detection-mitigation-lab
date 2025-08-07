@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 """
 Script para criar datasets limpos e otimizados
-Gera versões    """Criar amostra limpa do NF-UNSW-NB15-v3"""
-    logger.info("Criando dataset limpo NF-UNSW-NB15-v3...")
-    
-    np.random.seed(42)
-    
-    # Tipos de ataques NF-UNSW-NB15-v3nas e eficientes dos datasets originais
 """
 
 import logging
