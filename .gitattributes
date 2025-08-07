@@ -1,0 +1,42 @@
+# ================================
+# Git Line Endings Configuration
+# ================================
+
+# Default behavior: normalize line endings on input
+* text=auto
+
+# Text files should have LF endings in the repository
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.xml text eol=lf
+*.dockerfile text eol=lf
+Dockerfile text eol=lf
+
+# Shell scripts should have LF endings
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows batch files should have CRLF endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Configuration files
+docker-compose*.yml text eol=lf
+Dockerfile* text eol=lf
+*.env text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Documentation
+README* text eol=lf
+LICENSE* text eol=lf
+CHANGELOG* text eol=lf

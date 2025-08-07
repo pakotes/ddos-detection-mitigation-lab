@@ -1,0 +1,56 @@
+groups:
+  - name: ddos_detection
+    rules:
+      - alert: HighThreatDetectionRate
+        expr: rate(threats_detected_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alta taxa de detecção de ameaças"
+          description: "Taxa de detecção de ameaças é {{ $value }} por segundo nos últimos 5 minutos"
+
+      - alert: MLProcessorDown
+        expr: up{job="ml-processor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ML Processor está offline"
+          description: "O processador de ML está inacessível há mais de 1 minuto"
+
+      - alert: BGPControllerDown
+        expr: up{job="bgp-controller"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BGP Controller está offline"
+          description: "O controlador BGP está inacessível há mais de 1 minuto"
+
+      - alert: HighFalsePositiveRate
+        expr: rate(false_positives_total[10m]) / rate(threats_detected_total[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taxa de falsos positivos alta"
+          description: "Taxa de falsos positivos é {{ $value | humanizePercentage }}"
+
+      - alert: BGPAnnouncementsFailed
+        expr: rate(bgp_announcements_failed_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Falhas nos anúncios BGP"
+          description: "{{ $value }} anúncios BGP falharam nos últimos 5 minutos"
+
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_lag_max > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Lag alto no consumidor Kafka"
+          description: "Lag do consumidor Kafka é {{ $value }} mensagens"

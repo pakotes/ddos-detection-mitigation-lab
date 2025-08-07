@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # ML Processor - Processamento de Machine Learning
+  ml-processor:
+    build:
+      context: ../../ml-processor
+      dockerfile: Dockerfile
+    hostname: ml-processor
+    container_name: ml-processor
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${MACHINE1_IP:-localhost}:9092
+      REDIS_HOST: ${MACHINE1_IP:-localhost}
+      REDIS_PORT: 6379
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ../../ml-processor:/app
+      - ../../datasets:/app/datasets
+      - ml-models:/app/models
+      - ml-logs:/app/logs
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # Para métricas Prometheus
+    networks:
+      - ddos-network
+
+  # Data Ingestion - Ingestão de dados Suricata/NetFlow
+  data-ingestion:
+    build:
+      context: ../../data-ingestion
+      dockerfile: Dockerfile
+    hostname: data-ingestion
+    container_name: data-ingestion
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${MACHINE1_IP:-localhost}:9092
+      PYTHONUNBUFFERED: 1
+      SURICATA_LOG_PATH: /var/log/suricata/eve.json
+      NETFLOW_BIND_HOST: 0.0.0.0
+      NETFLOW_BIND_PORT: 2055
+    volumes:
+      - ../../data-ingestion:/app
+      - /var/log/suricata:/var/log/suricata:ro
+      - ingestion-logs:/app/logs
+    restart: unless-stopped
+    ports:
+      - "2055:2055/udp"  # NetFlow port
+      - "8002:8002"      # Métricas Prometheus
+    networks:
+      - ddos-network
+
+  # Node Exporter para métricas do sistema
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    hostname: node-exporter-machine2
+    container_name: node-exporter-machine2
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - ddos-network
+
+volumes:
+  ml-models:
+  ml-logs:
+  ingestion-logs:
+
+networks:
+  ddos-network:
+    name: ddos-mitigation-network
+    external: true

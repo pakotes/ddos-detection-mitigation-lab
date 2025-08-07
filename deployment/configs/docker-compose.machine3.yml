@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # BGP Controller - Controlador BGP com ExaBGP
+  bgp-controller:
+    build:
+      context: ../../bgp-controller
+      dockerfile: Dockerfile
+    hostname: bgp-controller
+    container_name: bgp-controller
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${MACHINE1_IP:-localhost}:9092
+      PYTHONUNBUFFERED: 1
+      EXABGP_CONFIG_PATH: /etc/exabgp/exabgp.conf
+    volumes:
+      - ../../bgp-controller:/app
+      - bgp-logs:/app/logs
+      - exabgp-config:/etc/exabgp
+    privileged: true
+    network_mode: host
+    restart: unless-stopped
+
+  # Prometheus - Monitoramento e métricas
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    hostname: prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-distributed.yml:/etc/prometheus/prometheus.yml
+      - ../../monitoring/prometheus/ddos_rules.yml:/etc/prometheus/ddos_rules.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=http://${MACHINE3_IP:-localhost}:9090'
+    networks:
+      - ddos-network
+
+  # Grafana - Dashboards e visualização
+  grafana:
+    image: grafana/grafana:10.1.0
+    hostname: grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_SERVER_ROOT_URL: http://${MACHINE3_IP:-localhost}:3000
+      GF_DATABASE_TYPE: sqlite3
+      GF_DATABASE_PATH: /var/lib/grafana/grafana.db
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../../monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-logs:/var/log/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - ddos-network
+
+  # AlertManager - Gerenciamento de alertas
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    hostname: alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://${MACHINE3_IP:-localhost}:9093'
+    networks:
+      - ddos-network
+
+  # Node Exporter para métricas do sistema
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    hostname: node-exporter-machine3
+    container_name: node-exporter-machine3
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - ddos-network
+
+volumes:
+  bgp-logs:
+  exabgp-config:
+  prometheus-data:
+  grafana-data:
+  grafana-logs:
+  alertmanager-data:
+
+networks:
+  ddos-network:
+    name: ddos-mitigation-network
+    external: true

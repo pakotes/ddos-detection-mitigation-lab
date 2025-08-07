@@ -1,0 +1,86 @@
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.cache/
+
+# === Virtual Environments ===
+venv/
+.venv/
+env/
+ENV/
+.env
+
+# === IDEs and Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === OS/Temp Files ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.tmp
+*.temp
+
+# === Docker ===
+.dockerignore
+volumes/
+data/
+
+# === Logs ===
+*.log
+logs/
+*.out
+
+# === Jupyter Notebooks ===
+.ipynb_checkpoints/
+
+# === Coverage ===
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# === Backups ===
+backups/
+*.backup
+*.bak
+
+# === Local development/test/debug ===
+local/
+local_*
+test_*
+debug_*
+
+# === Secrets (nunca commitar) ===
+*.key
+*.pem
+*.crt
+setup/config/secrets.yml
+setup/config/credentials.yml
+
+# === Large files & datasets (usar Git LFS) ===
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+datasets/**
+src/datasets/**
+src/models/**
+setup/dataset-preparation/CIC-DDoS2019/**
+setup/dataset-preparation/NF-UNSW-NB15-v3/**
+
+# === Manter apenas README.md nas pastas específicas ===
+!datasets/README.md
+!src/datasets/README.md
+!src/models/README.md
+!setup/dataset-preparation/CIC-DDoS2019/README.md
+!setup/dataset-preparation/NF-UNSW-NB15-v3/README.md
+!.env.example

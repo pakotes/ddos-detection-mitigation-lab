@@ -1,0 +1,77 @@
+# Configuração do Prometheus para ambiente distribuído
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "ddos_rules.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Machine 1 - Kafka e infraestrutura
+  - job_name: 'kafka-machine1'
+    static_configs:
+      - targets: ['${MACHINE1_IP}:9308']  # Kafka Exporter
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  - job_name: 'zookeeper-machine1'
+    static_configs:
+      - targets: ['${MACHINE1_IP}:7071']  # JMX Exporter ZooKeeper
+    scrape_interval: 15s
+
+  - job_name: 'redis-machine1'
+    static_configs:
+      - targets: ['${MACHINE1_IP}:9121']  # Redis Exporter
+    scrape_interval: 10s
+
+  - job_name: 'node-exporter-machine1'
+    static_configs:
+      - targets: ['${MACHINE1_IP}:9100']
+    scrape_interval: 10s
+
+  # Machine 2 - ML Processing e Data Ingestion
+  - job_name: 'ml-processor-machine2'
+    static_configs:
+      - targets: ['${MACHINE2_IP}:8000']  # ML Processor metrics
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  - job_name: 'data-ingestion-machine2'
+    static_configs:
+      - targets: ['${MACHINE2_IP}:8001']  # Data Ingestion metrics
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  - job_name: 'node-exporter-machine2'
+    static_configs:
+      - targets: ['${MACHINE2_IP}:9100']
+    scrape_interval: 10s
+
+  # Machine 3 - BGP Controller e Monitoring (local)
+  - job_name: 'bgp-controller'
+    static_configs:
+      - targets: ['localhost:8002']  # BGP Controller metrics
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  - job_name: 'node-exporter-machine3'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 10s
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['localhost:9093']
+    scrape_interval: 15s
+
+# Configuração do AlertManager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093

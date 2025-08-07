@@ -1,0 +1,5 @@
+kafka-python==2.0.2
+structlog==23.1.0
+watchdog==3.0.0
+aiofiles==23.1.0
+prometheus-client==0.17.1
