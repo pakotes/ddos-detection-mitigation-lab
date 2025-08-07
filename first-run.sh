@@ -256,6 +256,7 @@ with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
 print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
+}
 
 start_system() {
     log_step "A iniciar o sistema DDoS"
