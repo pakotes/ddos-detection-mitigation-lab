@@ -100,10 +100,8 @@ run_compose() {
     check_project_structure
     cd "$PROJECT_ROOT"
     
-    # Filtrar linhas do tipo '#N ...' (progresso do Docker) e mostrar apenas erros/avisos
-    FILTER_CMD="grep -v '^#'"
     if [ "$quiet" = "true" ]; then
-        if $compose_cmd -f "$DOCKER_COMPOSE_FILE" $args 2>&1 | $FILTER_CMD; then
+        if $compose_cmd -f "$DOCKER_COMPOSE_FILE" $args > /dev/null 2>&1; then
             echo -e "  ${GREEN}Containers built and started${NC}"
         else
             echo -e "  ${RED}Build failed - showing full output${NC}"
@@ -112,7 +110,7 @@ run_compose() {
         fi
     else
         log_info "Executing: $compose_cmd $args"
-        $compose_cmd -f "$DOCKER_COMPOSE_FILE" $args 2>&1 | $FILTER_CMD
+        $compose_cmd -f "$DOCKER_COMPOSE_FILE" $args
     fi
 }
 
