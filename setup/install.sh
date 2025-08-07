@@ -115,6 +115,9 @@ install_dependencies() {
     log_info "Instalando dependências ML..."
     
     # Criar requirements temporário se não existir
+    log_info "Atualizando pip, setuptools e wheel..."
+    python3 -m pip install --upgrade pip setuptools wheel --user
+
     if [ ! -f "${PROJECT_ROOT}/requirements.txt" ]; then
         cat > /tmp/requirements.txt << 'EOF'
 numpy>=1.21.0
