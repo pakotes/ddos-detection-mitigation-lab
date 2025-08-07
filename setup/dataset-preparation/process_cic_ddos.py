@@ -85,7 +85,7 @@ class CICDDoSProcessor:
     necessárias para classificação binária adequada.
     """
     
-    def __init__(self, input_dir=None, output_dir=None, batch_size=50000):
+    def __init__(self, input_dir=None, output_dir=None, batch_size=10000):
         """
         Initialize the CIC-DDoS processor.
         
