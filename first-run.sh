@@ -345,6 +345,15 @@ main() {
         fi
     fi
     
+    # Garantir permissões de execução para todos os start.sh relevantes
+    for service in ml-processor bgp-controller data-ingestion; do
+        sh_path="$PROJECT_ROOT/src/$service/start.sh"
+        if [ -f "$sh_path" ]; then
+            chmod +x "$sh_path"
+            log_info "Permissão de execução garantida para: $sh_path"
+        fi
+    done
+
     # Executar passos
     create_aliases
     check_datasets
