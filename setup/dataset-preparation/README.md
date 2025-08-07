@@ -25,14 +25,17 @@ Antes de executar qualquer processamento, é obrigatório efetuar o download man
    - `setup/dataset-preparation/CIC-DDoS2019/`
    - `setup/dataset-preparation/NF-UNSW-NB15-v3/`
 4. Verifique a estrutura de diretórios e a presença dos ficheiros CSV conforme indicado.
-5. Após o download e extração, pode validar a instalação executando:
+5. Para confirmar que os datasets estão corretamente instalados, execute:
 
    ```bash
-   cd setup/dataset-preparation
    python3 prepare_datasets.py --check
    ```
 
-O sistema irá detetar automaticamente os datasets disponíveis e reportar o estado da instalação.
+O comando acima **apenas verifica se os datasets estão presentes e prontos**. Para processar os dados, basta correr o script sem argumentos.
+
+   ```bash
+   python3 prepare_datasets.py
+   ```
 
 ## Estrutura do Diretório
 
