@@ -132,29 +132,29 @@ create_aliases() {
     local alias_file="$HOME/.ddos_aliases"
     cat > "$alias_file" << 'EOF'
 # DDoS Lab Aliases
-alias ddos-up='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh up'
-alias ddos-down='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh down'
-alias ddos-status='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh status'
-alias ddos-logs='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh logs'
-alias ddos-check='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh test'
-alias ddos-rebuild='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh rebuild'
+alias ddos-up='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh up'
+alias ddos-down='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh down'
+alias ddos-status='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh status'
+alias ddos-logs='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh logs'
+alias ddos-check='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh test'
+alias ddos-rebuild='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh rebuild'
 
 # Machine Learning Aliases
-alias ddos-train='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh train'
-alias ddos-train-simple='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh train-simple'
-alias ddos-train-advanced='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh train-advanced'
-alias ddos-train-clean='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh train-clean'
-alias ddos-create-clean='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh create-clean'
-alias ddos-create-realistic='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh create-realistic'
-alias ddos-train-realistic='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh train-realistic'
-alias ddos-validate='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh validate'
-alias ddos-optimize='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh optimize'
-alias ddos-benchmark='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh benchmark'
-alias ddos-analyze='cd ~/ddos-mitigation-lab && ./deployment/scripts/make.sh analyze'
+alias ddos-train='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh train'
+alias ddos-train-simple='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh train-simple'
+alias ddos-train-advanced='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh train-advanced'
+alias ddos-train-clean='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh train-clean'
+alias ddos-create-clean='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh create-clean'
+alias ddos-create-realistic='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh create-realistic'
+alias ddos-train-realistic='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh train-realistic'
+alias ddos-validate='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh validate'
+alias ddos-optimize='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh optimize'
+alias ddos-benchmark='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh benchmark'
+alias ddos-analyze='cd ~/ddos-detection-mitigation-lab && ./deployment/scripts/make.sh analyze'
 
 # Demo e utilitários
-alias ddos-demo='cd ~/ddos-mitigation-lab && python deployment/scripts/demo_modelo_ddos.py'
-alias ddos-cd='cd ~/ddos-mitigation-lab'
+alias ddos-demo='cd ~/ddos-detection-mitigation-lab && python deployment/scripts/demo_modelo_ddos.py'
+alias ddos-cd='cd ~/ddos-detection-mitigation-lab'
 EOF
     
     # Adicionar source ao bashrc se não existir
