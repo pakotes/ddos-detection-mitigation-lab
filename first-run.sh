@@ -34,11 +34,11 @@ log_success() {
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1" | tee -a "$LOG_FILE"
+    echo -e "${YELLOW}[AVISO]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"
+    echo -e "${RED}[ERRO]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 log_step() {
@@ -50,21 +50,21 @@ print_banner() {
     echo -e "${BLUE}${BOLD}"
     cat << 'EOF'
 ================================================================
-    DDoS Detection & Mitigation Lab - Primeira Execução
+    Laboratório de Deteção e Mitigação de DDoS - Primeira Execução
 ================================================================
 EOF
     echo -e "${NC}"
     echo "Este é o ponto de entrada recomendado para preparar e iniciar o laboratório."
     echo "• Valida se o sistema está pronto (Docker, Python, etc.)"
-    echo "• Executa o setup completo (install.sh) apenas se necessário"
-    echo "• Cria aliases úteis para facilitar o uso"
+    echo "• Executa a configuração completa (install.sh) apenas se necessário"
+    echo "• Cria atalhos úteis para facilitar o uso"
     echo "• Garante que os datasets estão prontos (gera sintéticos se faltar)"
     echo "• Inicia o sistema e mostra instruções de utilização."
     echo ""
 }
 
 check_system() {
-    log_step "Verificando Sistema"
+    log_step "A verificar o sistema"
     
     local need_setup=false
     
@@ -73,12 +73,12 @@ check_system() {
         log_warning "Docker não encontrado"
         need_setup=true
     elif ! docker info &> /dev/null 2>&1; then
-        log_warning "Docker não está funcionando"
+        log_warning "Docker não está a funcionar"
         need_setup=true
     else
         log_success "Docker OK: $(docker --version)"
     fi
-    
+
     # Docker Compose
     if ! docker compose version &> /dev/null && ! command -v docker-compose &> /dev/null; then
         log_warning "Docker Compose não encontrado"
@@ -86,7 +86,7 @@ check_system() {
     else
         log_success "Docker Compose OK"
     fi
-    
+
     # Python
     if ! command -v python3 &> /dev/null; then
         log_warning "Python3 não encontrado"
@@ -94,39 +94,39 @@ check_system() {
     else
         log_success "Python3 OK: $(python3 --version)"
     fi
-    
+
     if [ "$need_setup" = true ]; then
-        log_warning "Sistema precisa de configuração"
+        log_warning "O sistema precisa de configuração"
         return 1
     else
-        log_success "Sistema já configurado"
+        log_success "O sistema já está configurado"
         return 0
     fi
 }
 
 run_setup() {
-    log_step "Executando Setup Completo"
+    log_step "A executar configuração completa"
     
     if [ -f "$PROJECT_ROOT/setup/install.sh" ]; then
         log_info "A preparar o ambiente base (install.sh)..."
         chmod +x "$PROJECT_ROOT/setup/install.sh"
         "$PROJECT_ROOT/setup/install.sh"
-        # Validação pós-setup
+        # Validação pós-configuração
         log_info "A validar se o ambiente ficou corretamente configurado..."
         if ! check_system; then
-            log_error "O setup automático não conseguiu configurar o sistema corretamente. Por favor, consulte a documentação ou peça suporte."
+            log_error "A configuração automática não conseguiu preparar o sistema corretamente. Por favor, consulte a documentação ou peça suporte."
             exit 1
         fi
     else
-        log_error "Script de setup não encontrado: $PROJECT_ROOT/setup/install.sh"
+        log_error "Script de configuração não encontrado: $PROJECT_ROOT/setup/install.sh"
         return 1
     fi
 }
 
 create_aliases() {
-    log_step "Criando Aliases Convenientes"
-    
-    log_info "Criando aliases diretamente..."
+    log_step "A criar atalhos convenientes"
+
+    log_info "A criar atalhos diretamente..."
     
     # Criar aliases diretamente no ~/.bashrc
     local alias_file="$HOME/.ddos_aliases"
@@ -162,11 +162,11 @@ EOF
         echo "source ~/.ddos_aliases" >> "$HOME/.bashrc"
     fi
     
-    log_success "Aliases criados em $alias_file"
+    log_success "Atalhos criados em $alias_file"
 }
 
 check_datasets() {
-    log_step "Verificando e Preparando Datasets"
+    log_step "A verificar e preparar datasets"
     
     local datasets_dir="$PROJECT_ROOT/src/datasets/integrated"
     local clean_datasets_dir="$PROJECT_ROOT/src/datasets/clean"
@@ -186,26 +186,26 @@ try:
     print('Amostras disponíveis:', X.shape[0], 'com', X.shape[1], 'características')
     print('Total de ataques:', int(y.sum()), '(', round(100*y.mean(),1),'% )')
 except Exception as e:
-    print('Erro ao ler datasets:', e)
+    print('Erro ao ler os datasets:', e)
 " 2>/dev/null || log_info "Datasets encontrados (validação falhou)"
     fi
-    
+
     # Criar datasets limpos otimizados
     if [ ! -d "$clean_datasets_dir" ] || [ ! -f "$clean_datasets_dir/summary.json" ]; then
-        log_info "Criando datasets limpos otimizados..."
-        
+        log_info "A criar datasets limpos otimizados..."
+
         # Verificar se script existe
         if [ -f "$PROJECT_ROOT/deployment/scripts/create_clean_datasets.py" ]; then
             cd "$PROJECT_ROOT"
             python3 "$PROJECT_ROOT/deployment/scripts/create_clean_datasets.py" || {
-                log_warning "Falha na criação dos datasets limpos, mas continuando..."
+                log_warning "Falha na criação dos datasets limpos, mas a continuar..."
             }
-            
+
             if [ -f "$clean_datasets_dir/summary.json" ]; then
                 log_success "Datasets limpos otimizados criados"
                 log_info "Disponíveis: CIC-DDoS2019 limpo, UNSW-NB15 limpo, Dataset integrado"
             else
-                log_warning "Datasets limpos não foram criados corretamente"
+                log_warning "Os datasets limpos não foram criados corretamente"
             fi
         else
             log_warning "Script de criação de datasets limpos não encontrado"
@@ -216,15 +216,16 @@ except Exception as e:
 }
 
 generate_fallback_data() {
-    log_info "Gerando dados de fallback para teste..."
+datasets_dir = '$datasets_dir'
+    log_info "A gerar dados de fallback para teste..."
     mkdir -p "$datasets_dir"
-    
+
     python3 -c "
 import numpy as np
 import json
 import os
 
-print('Gerando dados sintéticos para teste...')
+print('A gerar dados sintéticos para teste...')
 np.random.seed(42)
 X = np.random.randn(5000, 20)
 y = (X[:, 0] + X[:, 1] + np.random.randn(5000) * 0.1) > 0
@@ -245,52 +246,52 @@ metadata = {
 with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
     json.dump(metadata, f, indent=2)
 
-print(f'✅ Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
-print('⚠️ IMPORTANTE: Estes são dados sintéticos para teste')
+print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
+print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
     log_success "Dados de fallback gerados"
     log_warning "IMPORTANTE: Substitua por datasets reais colocando-os manualmente nas pastas indicadas em setup/dataset-preparation. Consulte o ficheiro DATASET_SOURCES.md para instruções."
 }
 
 start_system() {
-    log_step "Iniciando Sistema DDoS"
+    log_step "A iniciar o sistema DDoS"
     
     cd "$PROJECT_ROOT"
     
     # Tornar make.sh executável
     chmod +x deployment/scripts/make.sh
-    
+
     # Definir variável para modo silencioso
     export DDOS_FIRST_RUN=true
-    
+
     # Iniciar sistema
     ./deployment/scripts/make.sh up
-    
+
     log_success "Sistema iniciado"
 }
 
 show_instructions() {
-    log_step "Sistema Pronto!"
-    
+    log_step "Sistema pronto!"
+
     echo ""
-    echo -e "${GREEN}${BOLD}Laboratório de DDoS Detection & Mitigation em execução!${NC}"
+    echo -e "${GREEN}${BOLD}Laboratório de Deteção e Mitigação de DDoS em execução!${NC}"
     echo ""
     echo -e "${CYAN}Dashboards disponíveis:${NC}"
     echo "   Grafana:    http://localhost:3000 (admin/admin123)"
     echo "   Prometheus: http://localhost:9090"
     echo ""
     echo -e "${CYAN}Comandos úteis:${NC}"
-    echo "   ./deployment/scripts/make.sh status    # Ver status"
-    echo "   ./deployment/scripts/make.sh logs      # Ver logs"
+    echo "   ./deployment/scripts/make.sh status    # Ver estado"
+    echo "   ./deployment/scripts/make.sh logs      # Ver registos"
     echo "   ./deployment/scripts/make.sh down      # Parar sistema"
     echo "   ./deployment/scripts/make.sh help      # Ajuda completa"
     echo ""
     if [ -f "$HOME/.ddos_aliases" ]; then
-        echo -e "${CYAN}Aliases disponíveis (após 'source ~/.bashrc'):${NC}"
+        echo -e "${CYAN}Atalhos disponíveis (após 'source ~/.bashrc'):${NC}"
         echo "   ddos-up         # Iniciar"
         echo "   ddos-down       # Parar"
-        echo "   ddos-status     # Status"
-        echo "   ddos-logs       # Logs"
+        echo "   ddos-status     # Estado"
+        echo "   ddos-logs       # Registos"
         echo "   ddos-check      # Verificar sistema"
         echo "   ddos-rebuild    # Reconstruir"
         echo ""
@@ -301,20 +302,20 @@ show_instructions() {
         echo -e "${YELLOW}Outros comandos ML:${NC}"
         echo "   ddos-train      # Treinar modelo"
         echo "   ddos-train-simple    # Treino rápido"
-        echo "   ddos-train-advanced  # Treino completo (pode dar erro memória)"
+        echo "   ddos-train-advanced  # Treino completo (pode dar erro de memória)"
         echo "   ddos-create-clean    # Recriar datasets otimizados"
         echo "   ddos-optimize   # Otimizar hiperparâmetros"
-        echo "   ddos-benchmark  # Avaliar performance"
+        echo "   ddos-benchmark  # Avaliar desempenho"
         echo "   ddos-analyze    # Analisar resultados"
         echo ""
     fi
-    echo -e "${GREEN}${BOLD}Proximo passo recomendado:${NC}"
-    echo "   1. source ~/.bashrc         # Ativar aliases"
+    echo -e "${GREEN}${BOLD}Próximo passo recomendado:${NC}"
+    echo "   1. source ~/.bashrc         # Ativar atalhos"
     echo "   2. ddos-train-clean         # Treinar modelos (rápido!)"
     echo ""
     echo -e "${BLUE}Documentação principal: README.md | docs/installation.md${NC}"
     echo -e "${BLUE}Para detalhes sobre datasets: setup/dataset-preparation/DATASET_SOURCES.md${NC}"
-    echo -e "${BLUE}Log desta execução: $LOG_FILE${NC}"
+    echo -e "${BLUE}Registo desta execução: $LOG_FILE${NC}"
 }
 
 main() {
