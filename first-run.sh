@@ -45,17 +45,17 @@ print_banner() {
     echo -e "${BLUE}${BOLD}"
     cat << 'EOF'
 ================================================================
-    DDoS Detection & Mitigation Lab - First Run Setup
+    DDoS Detection & Mitigation Lab - Primeira Execução
 ================================================================
 EOF
     echo -e "${NC}"
-    echo "Este script irá:"
-    echo "• Verificar se o sistema está configurado"
-    echo "• Executar setup se necessário"
-    echo "• Criar aliases convenientes"
-    echo "• Iniciar o sistema"
-    echo "• Mostrar como usar"
-    echo "" 
+    echo "Este é o ponto de entrada recomendado para preparar e iniciar o laboratório."
+    echo "• Valida se o sistema está pronto (Docker, Python, etc.)"
+    echo "• Executa o setup completo (install.sh) apenas se necessário"
+    echo "• Cria aliases úteis para facilitar o uso"
+    echo "• Garante que os datasets estão prontos (gera sintéticos se faltar)"
+    echo "• Inicia o sistema e mostra instruções de utilização."
+    echo ""
 }
 
 check_system() {
@@ -103,9 +103,15 @@ run_setup() {
     log_step "Executando Setup Completo"
     
     if [ -f "$PROJECT_ROOT/setup/install.sh" ]; then
-        log_info "Executando setup simplificado..."
+        log_info "A preparar o ambiente base (install.sh)..."
         chmod +x "$PROJECT_ROOT/setup/install.sh"
         "$PROJECT_ROOT/setup/install.sh"
+        # Validação pós-setup
+        log_info "A validar se o ambiente ficou corretamente configurado..."
+        if ! check_system; then
+            log_error "O setup automático não conseguiu configurar o sistema corretamente. Por favor, consulte a documentação ou peça suporte."
+            exit 1
+        fi
     else
         log_error "Script de setup não encontrado: $PROJECT_ROOT/setup/install.sh"
         return 1
@@ -162,50 +168,20 @@ check_datasets() {
     
     # Verificar se datasets reais existem
     if [ ! -f "$datasets_dir/X_integrated_real.npy" ] || [ ! -f "$datasets_dir/y_integrated_real.npy" ]; then
-        log_info "Datasets reais não encontrados. Iniciando download..."
-        
-        # Verificar se script de datasets existe
-        if [ -f "$PROJECT_ROOT/setup/datasets.sh" ]; then
-            log_info "Executando download automático de datasets..."
-            
-            # Tornar executável e executar
-            chmod +x "$PROJECT_ROOT/setup/datasets.sh"
-            if "$PROJECT_ROOT/setup/datasets.sh"; then
-                log_success "Download de datasets concluído"
-            else
-                log_warning "Download padrão falhou. Tentando script robusto..."
-                
-                # Tentar script robusto como fallback
-                if [ -f "$PROJECT_ROOT/setup/datasets_robust.sh" ]; then
-                    chmod +x "$PROJECT_ROOT/setup/datasets_robust.sh"
-                    if "$PROJECT_ROOT/setup/datasets_robust.sh"; then
-                        log_success "Download robusto de datasets concluído"
-                    else
-                        log_warning "Download robusto falhou. Gerando dados de fallback..."
-                        generate_fallback_data
-                    fi
-                else
-                    log_warning "Script robusto não encontrado. Gerando dados de fallback..."
-                    generate_fallback_data
-                fi
-            fi
-        else
-            log_warning "Script de download não encontrado. Gerando dados de fallback..."
-            generate_fallback_data
-        fi
+        log_warning "Datasets reais não encontrados. Serão gerados dados sintéticos de teste. Para uso real, coloque os datasets oficiais nas pastas indicadas em setup/dataset-preparation."
+        generate_fallback_data
     else
         log_success "Datasets reais já existem"
-        
         # Mostrar estatísticas
         python3 -c "
 import numpy as np
 try:
     X = np.load('$datasets_dir/X_integrated_real.npy')
     y = np.load('$datasets_dir/y_integrated_real.npy')
-    print(f'📊 Disponível: {X.shape[0]:,} amostras, {X.shape[1]} features')
-    print(f'🎯 Ataques: {y.sum():,} ({y.mean():.1%})')
+    print('Amostras disponíveis:', X.shape[0], 'com', X.shape[1], 'características')
+    print('Total de ataques:', int(y.sum()), '(', round(100*y.mean(),1),'% )')
 except Exception as e:
-    print(f'⚠️ Erro ao ler datasets: {e}')
+    print('Erro ao ler datasets:', e)
 " 2>/dev/null || log_info "Datasets encontrados (validação falhou)"
     fi
     
@@ -268,7 +244,7 @@ print(f'✅ Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('⚠️ IMPORTANTE: Estes são dados sintéticos para teste')
 "
     log_success "Dados de fallback gerados"
-    log_warning "IMPORTANTE: Substitua por datasets reais executando: ./setup/datasets.sh"
+    log_warning "IMPORTANTE: Substitua por datasets reais colocando-os manualmente nas pastas indicadas em setup/dataset-preparation. Consulte o ficheiro DATASET_SOURCES.md para instruções."
 }
 
 start_system() {
@@ -333,7 +309,8 @@ show_instructions() {
     echo "   1. source ~/.bashrc         # Ativar aliases"
     echo "   2. ddos-train-clean         # Treinar modelos (rápido!)"
     echo ""
-    echo -e "${BLUE}Documentação: README.md | docs/installation.md${NC}"
+    echo -e "${BLUE}Documentação principal: README.md | docs/installation.md${NC}"
+    echo -e "${BLUE}Para detalhes sobre datasets: setup/dataset-preparation/DATASET_SOURCES.md${NC}"
     echo -e "${BLUE}Log desta execução: $LOG_FILE${NC}"
 }
 
@@ -354,16 +331,16 @@ main() {
     # Verificar sistema
     if ! check_system; then
         echo ""
-        read -p "Sistema precisa de configuração. Executar setup agora? [Y/n]: " -n 1 -r
+        read -p "O sistema precisa de configuração. Deseja executar o setup automático agora? [Y/n]: " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             run_setup
-            
             echo ""
-            log_warning "IMPORTANTE: Faça logout e login antes de continuar"
-            read -p "Pressione Enter após fazer logout/login..."
+            log_warning "IMPORTANTE: Se foi adicionada a sua conta ao grupo 'docker', tem de fazer logout e login antes de continuar."
+            log_info "Por favor, termine a sessão e volte a entrar no sistema para garantir que as permissões Docker estão ativas."
+            read -p "Pressione Enter após fazer logout/login para continuar..."
         else
-            log_error "Setup cancelado. Sistema pode não funcionar corretamente."
+            log_error "Setup cancelado. O sistema pode não funcionar corretamente."
             exit 1
         fi
     fi

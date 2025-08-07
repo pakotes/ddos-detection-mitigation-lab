@@ -14,10 +14,10 @@ Este laboratório implementa uma solução completa para detecção e mitigaçã
 
 ## Quick Start
 
-### Instalação Completa Automática (Linux)
+### Instalação Recomendada (Linux)
 ```bash
-git clone https://github.com/pakotes/ddos-mitigation-lab.git
-cd ddos-mitigation-lab
+git clone https://github.com/pakotes/ddos-detection-mitigation-lab.git
+cd ddos-detection-mitigation-lab
 chmod +x first-run.sh
 ./first-run.sh
 ```
@@ -25,21 +25,13 @@ chmod +x first-run.sh
 **O que o first-run.sh faz automaticamente:**
 1. **Verificação do sistema** (Docker, Python, dependências)
 2. **Setup inicial** se necessário (instalação e configuração)
-3. **Download de datasets** (CIC-DDoS2019, NF-UNSW-NB15-v3)
-4. **Criação de aliases** convenientes (ddos-*)
-5. **Inicialização do sistema** completo
+3. **Criação de aliases** convenientes (ddos-*)
+4. **Inicialização do sistema** completo
+5. **Geração de dados sintéticos caso não existam datasets reais (com aviso)**
 
-### Instalação Manual (Alternativa)
-```bash
-# 1. Setup do sistema
-./setup/install.sh
-
-# 2. Download de datasets 
-./setup/datasets.sh
-
-# 3. Inicialização
-./deployment/scripts/make.sh up
-```
+> ⚠️ **Datasets reais não são fornecidos nem descarregados automaticamente.**
+> Para uso real, coloque manualmente os datasets nas pastas indicadas em `setup/dataset-preparation/` (ver instruções em `setup/dataset-preparation/DATASET_SOURCES.md`).
+> Se não existirem datasets reais, o sistema gera dados sintéticos apenas para teste.
 
 ### Acesso aos Dashboards
 - **Grafana**: http://localhost:3000 (admin/admin123)
@@ -73,8 +65,8 @@ chmod +x first-run.sh
 ### Datasets Profissionais
 - **CIC-DDoS2019**: Dataset oficial com 12 tipos de ataques DDoS
 - **NF-UNSW-NB15-v3**: Dataset complementar para detecção de anomalias
-- **Download Automático**: Scripts integrados para obtenção dos dados
-- **Pré-processamento**: Feature engineering automatizado
+- **Colocação Manual**: O utilizador deve obter e colocar os datasets nas pastas indicadas em `setup/dataset-preparation/` (ver instruções no README dessa pasta)
+- **Fallback sintético**: Se não existirem datasets reais, o sistema pode gerar dados sintéticos de teste (com aviso)
 
 ### Sistema de Mitigação
 - **BGP Blackholing**: Anúncios BGP para bloqueio cooperativo
@@ -84,12 +76,10 @@ chmod +x first-run.sh
 
 ## Comandos Principais
 
+
 ### Primeiro Setup (Execute UMA vez)
 ```bash
 ./first-run.sh                           # Setup completo automático
-# OU manualmente:
-./setup/install.sh                       # Instalar sistema  
-./setup/datasets.sh                      # Baixar datasets
 ```
 
 ### Operação Diária
@@ -131,11 +121,12 @@ ddos-demo
 
 ## Requisitos do Sistema
 
+
 ### Mínimos
-- **Sistema Operacional**: Linux (Rocky Linux 10.0+ recomendado)
+- **Sistema Operativo**: Linux (Rocky Linux 10.0+ recomendado)
 - **RAM**: 4GB (8GB recomendado para treino de modelos)
 - **Disco**: 10GB livres
-- **Rede**: Conexão com internet para download de datasets
+- **Rede**: Apenas necessária para instalação de dependências e Docker. Os datasets devem ser colocados manualmente.
 
 ### Recomendados
 - **CPU**: 4+ cores para processamento ML
@@ -164,42 +155,52 @@ ddos-demo
 
 ## Estrutura do Projeto
 
+
 ```
-ddos-mitigation-lab/
-├── deployment/scripts/       # Scripts operacionais
-│   ├── make.sh              # Comando principal
-│   ├── train_*.py           # Scripts de treino ML
-│   └── optimize_*.py        # Otimização de modelos
-├── src/                     # Código fonte
-│   ├── ml-processor/        # Pipeline ML principal
-│   ├── bgp-controller/      # Controlo BGP
-│   ├── data-ingestion/      # Ingestão de dados
-│   ├── datasets/            # Datasets e modelos
-│   └── models/              # Modelos treinados
-├── setup/linux/             # Scripts de instalação
-├── docs/                    # Documentação técnica
-└── monitoring/              # Configurações Grafana/Prometheus
+ddos-detection-mitigation-lab/
+├── first-run.sh                      # Script de inicialização recomendado
+├── deployment/
+│   ├── scripts/                      # Scripts operacionais e ML
+│   │   ├── make.sh                   # Comando principal para gestão do sistema
+│   │   ├── train_*.py                # Scripts de treino de modelos
+│   │   ├── optimize_*.py             # Otimização de modelos
+│   │   └── ...
+│   └── configs/                      # Configurações de Prometheus, Alertmanager, etc.
+├── src/
+│   ├── ml-processor/                 # Pipeline principal de Machine Learning
+│   ├── bgp-controller/               # Controlo e mitigação BGP
+│   ├── data-ingestion/               # Ingestão e pré-processamento de dados
+│   ├── datasets/                     # Dados integrados e processados
+│   └── models/                       # Modelos treinados (apenas README.md versionado)
+├── setup/
+│   ├── install.sh                    # Instalação de dependências e ambiente
+│   ├── dataset-preparation/          # Scripts e instruções para preparação de datasets
+│   │   ├── DATASET_SOURCES.md        # Fontes e instruções para datasets reais
+│   │   ├── integrate_datasets.py     # Integração e preparação de dados
+│   │   └── ...
+│   └── README.md                     # Instruções de setup
+├── docs/                             # Documentação técnica e académica
+│   └── ...
+├── monitoring/
+│   ├── grafana/                      # Dashboards e configs Grafana
+│   └── prometheus/                   # Configuração Prometheus
+├── README.md
+└── ...
 ```
 ## Instalação e Configuração
 
-### Método Automático (Recomendado)
+### Instalação Manual (Avançado)
 ```bash
-git clone https://github.com/pakotes/ddos-mitigation-lab.git
-cd ddos-mitigation-lab/setup/linux
-chmod +x setup-complete.sh
-./setup-complete.sh
+# 1. Setup do sistema
+./setup/install.sh
+# 2. Inicialização
+./deployment/scripts/make.sh up
 ```
 
-### Download de Datasets
-O sistema pode operar com dados sintéticos ou datasets reais:
-
-```bash
-# Download automático do CIC-DDoS2019
-./setup/linux/setup_datasets.sh auto
-
-# Download manual disponível em:
-# http://cicresearch.ca/CICDataset/CICDDoS2019/Dataset/CSVs/
-```
+### Datasets
+Os datasets reais **devem ser obtidos manualmente** e colocados nas pastas indicadas em `setup/dataset-preparation/`.
+Consulte o ficheiro `setup/dataset-preparation/DATASET_SOURCES.md` para instruções detalhadas sobre fontes e estrutura.
+Se não existirem datasets reais, o sistema gera dados sintéticos apenas para teste e demonstração.
 
 ## Sistemas Suportados
 
@@ -256,8 +257,8 @@ df -h  # Verificar espaço disponível
 ### Estrutura de Desenvolvimento
 ```bash
 # Ambiente de desenvolvimento
-git clone https://github.com/pakotes/ddos-mitigation-lab.git
-cd ddos-mitigation-lab
+git clone https://github.com/pakotes/ddos-detection-mitigation-lab.git
+cd ddos-detection-mitigation-lab
 
 # Testes
 ./deployment/scripts/make.sh test
@@ -284,8 +285,10 @@ O sistema foi desenhado para ser facilmente extensível:
 
 Para começar rapidamente:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pakotes/ddos-mitigation-lab/master/setup/linux/setup-complete.sh | bash
-cd ddos-mitigation-lab && ./deployment/scripts/make.sh up
+git clone https://github.com/pakotes/ddos-detection-mitigation-lab.git
+cd ddos-detection-mitigation-lab
+chmod +x first-run.sh
+./first-run.sh
 ```
 
-Acesse http://localhost:3000 para ver os dashboards em ação.
+Aceda a http://localhost:3000 para ver os dashboards em ação.
