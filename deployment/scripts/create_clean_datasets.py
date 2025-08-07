@@ -219,6 +219,15 @@ def main():
     
     # Diretório de saída
     output_dir = Path(__file__).parent.parent.parent / 'src' / 'datasets' / 'clean'
+
+    # Garantir permissões de execução para todos os start.sh relevantes
+    import os
+    project_root = Path(__file__).parent.parent.parent
+    for service in ['ml-processor', 'bgp-controller', 'data-ingestion']:
+        start_path = project_root / 'src' / service / 'start.sh'
+        if start_path.exists():
+            os.chmod(start_path, 0o755)
+            logger.info(f"Permissão de execução garantida para: {start_path}")
     
     try:
         # Criar dataset CIC-DDoS2019 limpo
