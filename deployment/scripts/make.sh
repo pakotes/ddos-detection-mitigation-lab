@@ -591,27 +591,26 @@ print('Modelo básico treinado e salvo em ./src/models/simple/')
             cd "$PROJECT_ROOT"
             if [ -f "$SCRIPTS_DIR/benchmark.py" ]; then
                 python3 "$SCRIPTS_DIR/benchmark.py"
-            else
-                log_error "Script de benchmark não encontrado"
-                exit 1
-            fi
-            ;;
-        "analyze")
-            log_header "Analisando Resultados"
-            check_docker
-            log_info "Analisando resultados dos modelos..."
-            
-            cd "$PROJECT_ROOT"
-            if [ -f "$SCRIPTS_DIR/analyze_results.py" ]; then
-                python3 "$SCRIPTS_DIR/analyze_results.py"
-            else
-                log_error "Script de análise não encontrado"
-                exit 1
-            fi
-            ;;
-        "demo")
-            log_header "Demonstração Interativa do Modelo"
-            check_datasets
+        else
+            log_error "Script de benchmark não encontrado"
+            exit 1
+        fi
+        ;;
+    "analyze")
+        log_header "Analisando Resultados"
+        check_docker
+        log_info "Analisando resultados dos modelos..."
+        cd "$PROJECT_ROOT"
+        if [ -f "$SCRIPTS_DIR/analyze_results.py" ]; then
+            python3 "$SCRIPTS_DIR/analyze_results.py"
+        else
+            log_error "Script de análise não encontrado"
+            exit 1
+        fi
+        ;;
+    "demo")
+        log_header "Demonstração Interativa do Modelo"
+        check_datasets
             log_info "Executando demonstração do modelo DDoS..."
             
             cd "$PROJECT_ROOT"

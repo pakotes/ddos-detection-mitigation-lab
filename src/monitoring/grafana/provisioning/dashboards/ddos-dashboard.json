@@ -1,7 +1,7 @@
 {
   "dashboard": {
     "id": null,
-    "title": "DDoS Mitigation System",
+    "title": "DDoS Detection & Mitigation",
     "tags": ["ddos", "monitoring"],
     "style": "dark",
     "timezone": "",
