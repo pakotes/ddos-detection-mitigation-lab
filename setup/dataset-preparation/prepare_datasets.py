@@ -183,7 +183,7 @@ class DatasetPreparationPipeline:
             processor_script = self.processors.get(dataset_name)
             
             if processor_script and processor_script.exists():
-                print(f"A processar {dataset_name}...")
+                print(f"\nA processar {dataset_name}...")
                 
                 success = self.run_processor(dataset_name, processor_script)
                 
