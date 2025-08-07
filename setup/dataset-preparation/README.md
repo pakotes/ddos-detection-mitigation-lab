@@ -28,10 +28,10 @@ Antes de executar qualquer processamento, é obrigatório efetuar o download man
 5. Para confirmar que os datasets estão corretamente instalados, execute:
 
    ```bash
+   cd setup/dataset-preparation/
    python3 prepare_datasets.py --check
    ```
-
-O comando acima **apenas verifica se os datasets estão presentes e prontos**. Para processar os dados, basta correr o script sem argumentos.
+  Para processar os dados, basta correr o script sem argumentos.
 
    ```bash
    python3 prepare_datasets.py
