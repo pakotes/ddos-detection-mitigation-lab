@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# DDoS Detection Lab - Setup Simplificado
+# DDoS Detection & Mitigation Lab- Setup Simplificado
 # Script único para instalação completa
 # 
 # Uso: ./setup/install.sh
-# Ou: curl -fsSL https://raw.githubusercontent.com/pakotes/ddos-mitigation-lab/master/setup/install.sh | bash
+# Ou: curl -fsSL https://raw.githubusercontent.com/pakotes/ddos-detection-mitigation-lab/master/setup/install.sh | bash
 #
 
 set -euo pipefail
@@ -28,10 +28,10 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"; }
 
 show_header() {
     echo -e "${CYAN}"
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║           DDoS Detection Lab - Setup Automático           ║"
-    echo "║                    Linux Installation                     ║"
-    echo "╚════════════════════════════════════════════════════════════╝"
+    echo "╔═════════════════════════════════════════════════════════════════════╗"
+    echo "║           ddos-detection-mitigation-lab - Setup Automático          ║"
+    echo "║                          Linux Installation                         ║"
+    echo "╚═════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
 
@@ -163,11 +163,6 @@ main() {
     setup_project
     
     log_success "Setup concluído com sucesso!"
-    echo ""
-    echo -e "${GREEN}🚀 Próximos passos:${NC}"
-    echo "1. Faça logout/login (para aplicar permissões Docker)"
-    echo "2. Execute: ./setup/datasets.sh (para baixar datasets)"
-    echo "3. Execute: ./deployment/scripts/make.sh up (para iniciar sistema)"
     echo ""
     echo -e "${CYAN}Logs salvos em: $LOG_FILE${NC}"
 }
