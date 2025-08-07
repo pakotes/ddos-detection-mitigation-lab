@@ -31,11 +31,13 @@ Antes de executar qualquer processamento, é obrigatório efetuar o download man
    cd setup/dataset-preparation/
    python3 prepare_datasets.py --check
    ```
-  Para processar os dados, basta correr o script sem argumentos.
+   
+   Para processar os dados, basta correr o script sem argumentos.
 
    ```bash
    python3 prepare_datasets.py
    ```
+  
 
 ## Estrutura do Diretório
 
