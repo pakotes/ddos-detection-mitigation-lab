@@ -234,7 +234,22 @@ if y.sum() == 0 or y.sum() == len(y):
     # Forçar pelo menos um exemplo da classe oposta
     y[0] = 1 - y[0]
 
-"
+    python3 -c "
+import numpy as np
+import json
+import os
+
+print('A gerar dados sintéticos para teste...')
+np.random.seed(42)
+X = np.random.randn(5000, 20)
+y = (X[:, 0] + X[:, 1] + np.random.randn(5000) * 0.1) > 0
+y = y.astype(int)
+# Garantir que existem pelo menos duas classes
+if y.sum() == 0 or y.sum() == len(y):
+    # Forçar pelo menos um exemplo da classe oposta
+    y[0] = 1 - y[0]
+
+    log_success "Sistema iniciado"
 np.save(f'{datasets_dir}/X_integrated_real.npy', X)
 np.save(f'{datasets_dir}/y_integrated_real.npy', y)
 
@@ -253,22 +268,6 @@ with open(f'{datasets_dir}/metadata_real.json', 'w') as f:
 print(f'Dados de fallback gerados: {X.shape} amostras, {y.sum()} positivas')
 print('IMPORTANTE: Estes são dados sintéticos para teste')
 "
-
-start_system() {
-    log_step "A iniciar o sistema DDoS"
-    
-    cd "$PROJECT_ROOT"
-    
-    # Tornar make.sh executável
-    chmod +x deployment/scripts/make.sh
-
-    # Definir variável para modo silencioso
-    export DDOS_FIRST_RUN=true
-
-    # Iniciar sistema
-    ./deployment/scripts/make.sh up
-
-    log_success "Sistema iniciado"
 }
 
 show_instructions() {
