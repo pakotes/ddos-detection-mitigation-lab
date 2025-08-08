@@ -131,6 +131,7 @@ matplotlib>=3.3.0
 seaborn>=0.11.0
 jupyter>=1.0.0
 plotly>=5.0.0
+    pyarrow>=5.0.0
 EOF
         pip3 install -r /tmp/requirements.txt --user
     else

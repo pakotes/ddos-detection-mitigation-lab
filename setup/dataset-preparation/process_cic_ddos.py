@@ -1,414 +1,219 @@
 #!/usr/bin/env python3
 """
-Processador do Conjunto de Dados CIC-DDoS2019
+Processador CIC-DDoS2019
 
-Este módulo processa o conjunto de dados CIC-DDoS2019 para detecção especializada
-de DDoS. Trata do carregamento de dados, pré-processamento, engenharia de 
-características e processamento em lotes para manuseamento eficiente de memória
-de grandes conjuntos de dados.
+Pipeline robusto para preparação do dataset CIC-DDoS2019 segundo as 6 diretivas principais:
+1. Remoção de features irrelevantes/socket
+2. Remoção/substituição de valores em falta/infinitos
+3. Remoção de duplicados
+4. Seleção aleatória de subconjuntos equilibrados por classe
+5. Divisão treino/teste/validação
+6. Escalonamento MinMax
 
-O processador trata especificamente da inclusão de dados de tráfego BENIGN
-que é essencial para treino realista de modelos de detecção de DDoS.
-
+Extras incluídos:
+- Logging detalhado
+- Exportação de metadados completos
+- Relatórios de distribuição de classes
+- Exportação de amostras por classe
+- Exportação de features removidas
+- Exportação de índices de amostras selecionadas
 """
 
 import pandas as pd
 import numpy as np
 import json
-import pickle
 from pathlib import Path
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 import logging
-import gc
 
-# Diagnóstico automático de headers dos CSV do CIC-DDoS2019
-def diagnosticar_headers_csv(input_dir=None):
-    """
-    Diagnostica headers dos ficheiros CSV no diretório CIC-DDoS2019.
-    Lista headers únicos e associa cada ficheiro ao respetivo header.
-    Sinaliza ficheiros com headers diferentes.
-    """
-    from collections import defaultdict
-    import pandas as pd
-    from pathlib import Path
-
-    if input_dir is None:
-        input_dir = Path(__file__).parent / "CIC-DDoS2019"
-    else:
-        input_dir = Path(input_dir)
-
-    # Encontrar todos os CSV
-    csv_files = []
-    for subdir in input_dir.iterdir():
-        if subdir.is_dir():
-            csv_files.extend(list(subdir.glob("*.csv")))
-    csv_files.extend(list(input_dir.glob("*.csv")))
-
-    if not csv_files:
-        print(f"[Diagnóstico] Não foram encontrados ficheiros CSV em {input_dir}")
-        return
-
-    headers_dict = defaultdict(list)
-    for f in csv_files:
-        try:
-            df = pd.read_csv(f, nrows=1, low_memory=False)
-            header_tuple = tuple([c.strip() for c in df.columns])
-            headers_dict[header_tuple].append(str(f))
-        except Exception as e:
-            print(f"[Diagnóstico] Erro ao ler {f}: {e}")
-
-    print("\n[Diagnóstico] Headers únicos encontrados nos CSV:")
-    for idx, (header, files) in enumerate(headers_dict.items(), 1):
-        print(f"\nHeader #{idx} (ocorrências: {len(files)}):")
-        print(f"  Colunas: {header}")
-        print("  Ficheiros:")
-        for file in files:
-            print(f"    - {file}")
-
-    if len(headers_dict) > 1:
-        print("\n[Diagnóstico] AVISO: Foram encontrados múltiplos headers diferentes! Recomenda-se corrigir/remover os ficheiros problemáticos antes de processar o dataset.")
-    else:
-        print("\n[Diagnóstico] Todos os ficheiros CSV têm o mesmo header. Pronto para processamento.")
-
-    print("\n[Diagnóstico] Fim do diagnóstico de headers.\n")
-
-# Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Diretivas
+SOCKET_FEATURES = [
+    'Unnamed: 0', 'Source Port', 'Destination Port', 'Flow ID',
+    'Source IP', 'Destination IP', 'Timestamp', 'SimilarHTTP'
+]
+WEB_DDOS_CLASS = 'WebDDoS'
+MAX_SAMPLES_PER_CLASS = 150000
+VALIDATION_RATIO = 0.1
+TEST_RATIO = 0.2
+TRAIN_RATIO = 0.8
+
 class CICDDoSProcessor:
-    """
-    Processador do conjunto de dados CIC-DDoS2019 para deteção de ataques DDoS.
-    Este processador foi concebido para tratar o conjunto completo CIC-DDoS2019,
-    incluindo amostras de ataque e amostras cruciais de tráfego BENIGN necessárias para classificação binária realista.
-    """
-    
-    def __init__(self, input_dir=None, output_dir=None, batch_size=50000):
-        """
-        Inicializa o processador CIC-DDoS2019.
-        
-        Args:
-            input_dir: Caminho para o diretório do dataset CIC-DDoS2019
-            output_dir: Caminho para guardar os dados processados
-            batch_size: Número de amostras a processar em cada batch
-        """
+    def __init__(self, input_dir=None, output_dir=None):
         if input_dir is None:
-            # Use local dataset directory
             self.input_dir = Path(__file__).parent / "CIC-DDoS2019"
         else:
             self.input_dir = Path(input_dir)
-            
         if output_dir is None:
             base_dir = Path(__file__).parent.parent.parent
             self.output_dir = base_dir / "src" / "datasets" / "processed"
         else:
             self.output_dir = Path(output_dir)
-            
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.batch_size = batch_size
-    
-    def find_csv_files(self):
-        """Localiza todos os ficheiros CSV na estrutura de diretórios do dataset"""
-        csv_files = []
-        
-        # Search in subdirectories (01-12, 03-11, etc.)
-        for subdir in self.input_dir.iterdir():
-            if subdir.is_dir():
-                csv_files.extend(list(subdir.glob("*.csv")))
-        
-        # Also check root directory
-        csv_files.extend(list(self.input_dir.glob("*.csv")))
-        
-        if not csv_files:
-            raise FileNotFoundError(f"No CSV files found in {self.input_dir}")
-        
-        logger.info(f"Located {len(csv_files)} CSV files for processing")
-        return csv_files
-    
-    def analyze_data_structure(self, csv_files):
-        """Analisa o primeiro ficheiro para compreender a estrutura dos dados"""
-        first_file = csv_files[0]
-        logger.info(f"Analyzing data structure using {first_file.name}")
-        
-        # Read a sample to understand structure
-        sample_df = pd.read_csv(first_file, nrows=1000, low_memory=False)
-        
-        # Find label column
-        label_candidates = ['Label', ' Label', 'label']
-        label_col = None
-        
-        for candidate in label_candidates:
-            if candidate in sample_df.columns:
-                label_col = candidate
-                break
-            # Try stripped version
-            stripped_cols = [col.strip() for col in sample_df.columns]
-            if candidate.strip() in stripped_cols:
-                label_col = sample_df.columns[stripped_cols.index(candidate.strip())]
-                break
-        
-        if label_col is None:
-            raise ValueError("Could not identify label column in dataset")
-        
-        # Get feature columns (all except label)
-        feature_cols = [col for col in sample_df.columns if col != label_col]
-        
-        # Identify numeric features for processing
-        numeric_features = sample_df[feature_cols].select_dtypes(include=[np.number]).columns.tolist()
-        
-        logger.info(f"Label column: '{label_col}'")
-        logger.info(f"Total features: {len(feature_cols)}")
-        logger.info(f"Numeric features: {len(numeric_features)}")
-        
-        return label_col, numeric_features
-    
-    def process_chunk(self, chunk, label_col, numeric_features):
-        """Processa um lote de dados, ignora linhas não numéricas ou headers duplicados e garante sempre as mesmas colunas."""
-        if chunk.empty:
-            return None, None
 
-        # Detetar e remover headers duplicados (linhas iguais ao header original)
-        header_set = set(chunk.columns)
-        mask_header = chunk.apply(lambda row: set(str(x).strip() for x in row) == header_set, axis=1)
-        n_headers_duplicados = mask_header.sum()
-        if n_headers_duplicados > 0:
-            chunk = chunk[~mask_header]
+    def find_data_file(self):
+        # Procura por Parquet, Feather, depois CSV
+        for ext in [".parquet", ".feather", ".csv"]:
+            files = list(self.input_dir.glob(f"*{ext}"))
+            if files:
+                logger.info(f"Ficheiro encontrado: {files[0].name}")
+                return files[0], ext
+        raise FileNotFoundError("Nenhum ficheiro de dados encontrado.")
 
-        # Garantir que todas as colunas numéricas existem (mesmo que estejam em falta neste chunk)
-        for col in numeric_features:
-            if col not in chunk.columns:
-                chunk[col] = np.nan
+    def load_data(self):
+        file_path, ext = self.find_data_file()
+        if ext == ".parquet":
+            df = pd.read_parquet(file_path)
+        elif ext == ".feather":
+            df = pd.read_feather(file_path)
+        elif ext == ".csv":
+            df = pd.read_csv(file_path, low_memory=False)
+        else:
+            raise ValueError("Formato de ficheiro não suportado.")
+        logger.info(f"Total de amostras carregadas: {df.shape[0]:,}")
+        return df, ext
 
-        # Converter colunas numéricas, forçando erros a NaN, e garantir ordem das colunas
-        X_chunk = chunk[numeric_features].apply(pd.to_numeric, errors='coerce')
-        X_chunk = X_chunk[numeric_features]  # garantir ordem
-        linhas_invalidas = X_chunk.isnull().all(axis=1)
-        n_linhas_invalidas = linhas_invalidas.sum()
-        if n_linhas_invalidas > 0:
-            chunk = chunk[~linhas_invalidas]
-            X_chunk = X_chunk[~linhas_invalidas]
+    def remove_socket_features(self, df):
+        features_removidas = [f for f in SOCKET_FEATURES if f in df.columns]
+        df = df.drop(columns=features_removidas, errors='ignore')
+        logger.info(f"Features de socket removidas: {features_removidas}")
+        return df, features_removidas
 
-        # Se não restam linhas válidas
-        if chunk.empty or X_chunk.empty:
-            logger.warning("Chunk vazio após remoção de linhas inválidas/headers duplicados.")
-            return None, None
+    def clean_missing_and_inf(self, df):
+        # Substituir inf/-inf por NaN
+        df = df.replace([np.inf, -np.inf], np.nan)
+        # Substituir NaN por mediana da coluna
+        n_missing = df.isna().sum().sum()
+        df = df.fillna(df.median(numeric_only=True))
+        logger.info(f"Valores em falta/infinitos tratados: {n_missing}")
+        return df, int(n_missing)
 
-        # Extrair labels (apenas das linhas válidas)
-        labels = chunk[label_col]
-        is_benign = labels.astype(str).str.upper() == 'BENIGN'
-        y_binary = (~is_benign).astype(int)
+    def remove_duplicates(self, df):
+        n_before = df.shape[0]
+        df = df.drop_duplicates()
+        n_after = df.shape[0]
+        logger.info(f"Duplicados removidos: {n_before - n_after}")
+        return df, n_before - n_after
 
-        # Data cleaning
-        X_chunk = X_chunk.replace([np.inf, -np.inf], np.nan)
-        X_chunk = X_chunk.fillna(X_chunk.median())
+    def select_balanced_subset(self, df, label_col='Attack'):  # 'Attack' ou 'Label'
+        # Excluir WebDDoS
+        if WEB_DDOS_CLASS in df[label_col].unique():
+            df = df[df[label_col] != WEB_DDOS_CLASS]
+            logger.info(f"Classe {WEB_DDOS_CLASS} excluída.")
+        # Seleção aleatória por classe
+        subset_indices = []
+        class_counts = {}
+        for cls in df[label_col].unique():
+            cls_idx = df[df[label_col] == cls].index
+            n_cls = len(cls_idx)
+            n_select = min(n_cls, MAX_SAMPLES_PER_CLASS)
+            selected = np.random.choice(cls_idx, n_select, replace=False)
+            subset_indices.extend(selected)
+            class_counts[cls] = n_select
+        df_subset = df.loc[subset_indices].reset_index(drop=True)
+        logger.info(f"Amostras selecionadas por classe: {class_counts}")
+        return df_subset, class_counts, subset_indices
 
-        # Logging do que foi removido
-        if n_headers_duplicados > 0 or n_linhas_invalidas > 0:
-            logger.warning(f"Chunk: {n_headers_duplicados} headers duplicados e {n_linhas_invalidas} linhas não numéricas removidas.")
+    def split_data(self, df, label_col='Attack', binary_col='Malicious'):
+        # Multiclass
+        X = df.drop(columns=[label_col, binary_col], errors='ignore').values
+        y_multi = df[label_col].values
+        # Binário
+        y_bin = df[binary_col].values if binary_col in df.columns else (df[label_col] != 'BENIGN').astype(int)
+        # Split
+        X_train, X_test, y_train_multi, y_test_multi, y_train_bin, y_test_bin = train_test_split(
+            X, y_multi, y_bin, test_size=TEST_RATIO, random_state=42, stratify=y_multi)
+        # Validação
+        X_train, X_val, y_train_multi, y_val_multi, y_train_bin, y_val_bin = train_test_split(
+            X_train, y_train_multi, y_train_bin, test_size=VALIDATION_RATIO, random_state=42, stratify=y_train_multi)
+        logger.info(f"Split: treino={X_train.shape[0]}, val={X_val.shape[0]}, teste={X_test.shape[0]}")
+        return (X_train, X_val, X_test, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin)
 
-        return X_chunk.values, y_binary.values
-    
-    def load_and_preprocess(self):
-        """Processa cada ficheiro individualmente, guarda batches temporários e junta tudo de forma eficiente usando numpy.memmap."""
-        logger.info("Início do processamento do dataset CIC-DDoS2019 (ficheiro a ficheiro, armazenamento temporário)")
+    def scale_features(self, X_train, X_val, X_test):
+        scaler = MinMaxScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_val_scaled = scaler.transform(X_val)
+        X_test_scaled = scaler.transform(X_test)
+        logger.info("Features normalizadas com MinMaxScaler.")
+        return X_train_scaled, X_val_scaled, X_test_scaled, scaler
 
-        # Encontrar todos os ficheiros CSV
-        csv_files = self.find_csv_files()
-
-        # Analisar estrutura dos dados
-        label_col, numeric_features = self.analyze_data_structure(csv_files)
-
-        temp_dir = self.output_dir / "tmp_cic_ddos"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        temp_X_files = []
-        temp_y_files = []
-        total_samples = 0
-        total_features = None
-        samples_per_file = []
-
-        for file_idx, csv_file in enumerate(csv_files):
-            logger.info(f"A processar ficheiro {file_idx + 1}/{len(csv_files)}: {csv_file.name}")
-            file_X_batches = []
-            file_y_batches = []
-            try:
-                chunk_reader = pd.read_csv(csv_file, chunksize=self.batch_size, low_memory=False)
-                for chunk_idx, chunk in enumerate(chunk_reader):
-                    X_chunk, y_chunk = self.process_chunk(chunk, label_col, numeric_features)
-                    if X_chunk is not None:
-                        file_X_batches.append(X_chunk)
-                        file_y_batches.append(y_chunk)
-                        total_samples += len(X_chunk)
-                    if (chunk_idx + 1) % 10 == 0:
-                        logger.info(f"  Processadas {(chunk_idx + 1) * self.batch_size:,} linhas em {csv_file.name}")
-                # Guardar batches deste ficheiro em ficheiros temporários
-                if file_X_batches:
-                    X_file = temp_dir / f"X_{file_idx}.npy"
-                    y_file = temp_dir / f"y_{file_idx}.npy"
-                    X_stacked = np.vstack(file_X_batches)
-                    y_concat = np.concatenate(file_y_batches)
-                    np.save(X_file, X_stacked)
-                    np.save(y_file, y_concat)
-                    temp_X_files.append(X_file)
-                    temp_y_files.append(y_file)
-                    samples_per_file.append(X_stacked.shape[0])
-                    if total_features is None:
-                        total_features = X_stacked.shape[1]
-                del file_X_batches, file_y_batches, X_stacked, y_concat
-                gc.collect()
-            except Exception as e:
-                logger.warning(f"Erro ao processar {csv_file.name}: {str(e)}")
-                continue
-
-        if not temp_X_files:
-            raise ValueError("Nenhum dado válido foi processado de nenhum ficheiro")
-
-        # Juntar todos os ficheiros temporários de forma eficiente usando numpy.memmap
-        logger.info("A combinar todos os dados processados dos ficheiros temporários com numpy.memmap")
-        total_rows = sum(samples_per_file)
-        X_memmap_path = self.output_dir / "X_cic_ddos_memmap.dat"
-        y_memmap_path = self.output_dir / "y_cic_ddos_memmap.dat"
-        X_final = np.memmap(X_memmap_path, dtype='float32', mode='w+', shape=(total_rows, total_features))
-        y_final = np.memmap(y_memmap_path, dtype='int8', mode='w+', shape=(total_rows,))
-
-        row_idx = 0
-        for X_file, y_file, n_rows in zip(temp_X_files, temp_y_files, samples_per_file):
-            X_part = np.load(X_file)
-            y_part = np.load(y_file)
-            X_final[row_idx:row_idx+n_rows, :] = X_part
-            y_final[row_idx:row_idx+n_rows] = y_part
-            row_idx += n_rows
-            del X_part, y_part
-            gc.collect()
-
-        # Remover features com variância zero apenas no final
-        feature_variance = np.var(X_final, axis=0)
-        valid_features_idx = np.where(feature_variance > 0)[0]
-        X_final_valid = X_final[:, valid_features_idx]
-        final_features = [numeric_features[i] for i in valid_features_idx]
-
-        # Converter para arrays normais para guardar
-        X_final_valid = np.array(X_final_valid)
-        y_final = np.array(y_final)
-
-        # Limpar temporários
-        for f in temp_X_files + temp_y_files:
-            try:
-                f.unlink()
-            except Exception:
-                pass
-        try:
-            temp_dir.rmdir()
-        except Exception:
-            pass
-        try:
-            X_final._mmap.close()
-            y_final._mmap.close()
-        except Exception:
-            pass
-        try:
-            X_memmap_path.unlink()
-            y_memmap_path.unlink()
-        except Exception:
-            pass
-
-        # Estatísticas
-        benign_count = (y_final == 0).sum()
-        attack_count = (y_final == 1).sum()
-        attack_ratio = attack_count / len(y_final)
-
-        logger.info(f"Processamento do dataset concluído:")
-        logger.info(f"  Total de amostras: {len(y_final):,}")
-        logger.info(f"  Features: {X_final_valid.shape[1]}")
-        logger.info(f"  Amostras BENIGN: {benign_count:,} ({(1-attack_ratio)*100:.1f}%)")
-        logger.info(f"  Amostras de ataque: {attack_count:,} ({attack_ratio*100:.1f}%)")
-
-        gc.collect()
-        return X_final_valid, y_final, final_features
-    
-    def save_processed_data(self, X, y, feature_names):
-        """Guarda os dados processados em disco"""
-        logger.info("A guardar dados processados do CIC-DDoS2019")
-
-        # Guardar dados processados
-        np.save(self.output_dir / "X_cic_ddos.npy", X)
-        np.save(self.output_dir / "y_cic_ddos.npy", y)
-
-        # Criar e guardar scaler de features
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-        np.save(self.output_dir / "X_cic_ddos_scaled.npy", X_scaled)
-
-        # Guardar scaler para uso futuro
-        with open(self.output_dir / "scaler_cic_ddos.pkl", 'wb') as f:
+    def export_all(self, X_train, X_val, X_test, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin, scaler, features, metainfo):
+        # Exportar arrays
+        np.save(self.output_dir / "X_train_cic_v2.npy", X_train)
+        np.save(self.output_dir / "X_val_cic_v2.npy", X_val)
+        np.save(self.output_dir / "X_test_cic_v2.npy", X_test)
+        np.save(self.output_dir / "y_train_multi_cic_v2.npy", y_train_multi)
+        np.save(self.output_dir / "y_val_multi_cic_v2.npy", y_val_multi)
+        np.save(self.output_dir / "y_test_multi_cic_v2.npy", y_test_multi)
+        np.save(self.output_dir / "y_train_bin_cic_v2.npy", y_train_bin)
+        np.save(self.output_dir / "y_val_bin_cic_v2.npy", y_val_bin)
+        np.save(self.output_dir / "y_test_bin_cic_v2.npy", y_test_bin)
+        # Exportar scaler
+        import pickle
+        with open(self.output_dir / "scaler_cic_v2.pkl", "wb") as f:
             pickle.dump(scaler, f)
+        # Exportar features
+        with open(self.output_dir / "feature_names_cic_v2.txt", "w") as f:
+            f.write('\n'.join(features))
+        # Exportar metadados
+        with open(self.output_dir / "metadata_cic_v2.json", "w") as f:
+            json.dump(metainfo, f, indent=2)
+        logger.info("Dados e metadados exportados.")
 
-        # Guardar nomes das features
-        with open(self.output_dir / "feature_names_cic_ddos.txt", 'w') as f:
-            f.write('\n'.join(feature_names))
-
-        # Criar e guardar metadados
-        metadata = {
-            'dataset': 'CIC-DDoS2019',
-            'data_processamento': pd.Timestamp.now().isoformat(),
-            'total_amostras': int(len(y)),
-            'num_features': int(X.shape[1]),
-            'amostras_benignas': int((y == 0).sum()),
-            'amostras_ataque': int((y == 1).sum()),
-            'percentagem_ataque': float((y == 1).mean() * 100),
-            'nomes_features': feature_names,
-            'descricao': 'Dataset CIC-DDoS2019 processado para deteção de DDoS com tráfego BENIGN incluído'
+    def process(self):
+        # 1. Carregar dados
+        df, ext = self.load_data()
+        # 2. Remover features irrelevantes (se existirem)
+        df, features_removidas = self.remove_socket_features(df)
+        # 3. Limpar valores em falta/infinitos e duplicados apenas para CSV
+        if ext == ".csv":
+            df, n_missing = self.clean_missing_and_inf(df)
+            df, n_dupes = self.remove_duplicates(df)
+        else:
+            n_missing = 0
+            n_dupes = 0
+        # 4. Criar coluna binária
+        label_col = 'Label' if 'Label' in df.columns else ('Attack' if 'Attack' in df.columns else None)
+        if label_col is None:
+            raise ValueError("Coluna de label não encontrada.")
+        df['Malicious'] = (df[label_col].str.upper() != 'BENIGN').astype(int)
+        # 5. Seleção aleatória equilibrada
+        df_subset, class_counts, subset_indices = self.select_balanced_subset(df, label_col=label_col)
+        # 6. Split
+        split = self.split_data(df_subset, label_col=label_col, binary_col='Malicious')
+        X_train, X_val, X_test, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin = split
+        # 7. Escalonamento
+        features = [c for c in df_subset.columns if c not in [label_col, 'Malicious']]
+        X_train_scaled, X_val_scaled, X_test_scaled, scaler = self.scale_features(X_train, X_val, X_test)
+        # 8. Metadados
+        metainfo = {
+            'formato_ficheiro': ext,
+            'total_amostras': int(df.shape[0]),
+            'amostras_pos_limpeza': int(df_subset.shape[0]),
+            'features_removidas': features_removidas,
+            'n_missing': n_missing,
+            'n_dupes': n_dupes,
+            'class_counts': class_counts,
+            'subset_indices': [int(i) for i in subset_indices],
+            'features': features,
+            'split': {
+                'train': int(X_train.shape[0]),
+                'val': int(X_val.shape[0]),
+                'test': int(X_test.shape[0])
+            }
         }
-
-        with open(self.output_dir / "metadata_cic_ddos.json", 'w') as f:
-            json.dump(metadata, f, indent=2)
-
-        logger.info(f"Todos os dados guardados em: {self.output_dir}")
-        return metadata
-
-def main():
-    """Executa o pipeline de processamento do CIC-DDoS2019"""
-    print("Processador do Dataset CIC-DDoS2019")
-    print("=" * 50)
-
-    try:
-        processor = CICDDoSProcessor()
-
-        # Verificar se o diretório de input existe
-        if not processor.input_dir.exists():
-            print(f"Erro: Diretório de input não encontrado: {processor.input_dir}")
-            print("Por favor, certifique-se que o dataset CIC-DDoS2019 está disponível no local correto.")
-            return False
-
-        # Processar o dataset
-        X, y, feature_names = processor.load_and_preprocess()
-
-        # Guardar dados processados
-        metadata = processor.save_processed_data(X, y, feature_names)
-
-        # Resumo
-        print("\nResumo do Processamento:")
-        print(f"Dataset: {metadata['dataset']}")
-        print(f"Total de amostras: {metadata['total_amostras']:,}")
-        print(f"Features: {metadata['num_features']}")
-        print(f"Tráfego BENIGN: {metadata['amostras_benignas']:,}")
-        print(f"Ataques DDoS: {metadata['amostras_ataque']:,}")
-        print(f"Percentagem de ataque: {metadata['percentagem_ataque']:.1f}%")
-        print(f"Diretório de output: {processor.output_dir}")
-
-        logger.info("Processamento do CIC-DDoS2019 concluído com sucesso")
-        return True
-
-    except Exception as e:
-        logger.error(f"Falha no processamento: {str(e)}")
-        print(f"\nErro: {str(e)}")
-        return False
+        # 9. Exportar tudo
+        self.export_all(X_train_scaled, X_val_scaled, X_test_scaled, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin, scaler, features, metainfo)
+        logger.info("Processamento CIC-DDoS2019 concluído.")
+        print("Processamento CIC-DDoS2019 concluído!")
+        print(f"Amostras finais: {df_subset.shape[0]:,}")
+        print(f"Features finais: {len(features)}")
+        print(f"Distribuição por classe: {class_counts}")
+        print(f"Diretório de saída: {self.output_dir}")
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--diagnostico":
-        print("Diagnóstico automático de headers dos CSV do CIC-DDoS2019\n" + "="*60)
-        diagnosticar_headers_csv()
-        exit(0)
-    success = main()
-    if not success:
-        exit(1)
+    processor = CICDDoSProcessor()
+    processor.process()

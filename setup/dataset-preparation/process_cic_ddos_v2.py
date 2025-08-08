@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Processador Avançado CIC-DDoS2019 v2
+Processador CIC-DDoS2019
 
 Pipeline robusto para preparação do dataset CIC-DDoS2019 segundo as 6 diretivas principais:
 1. Remoção de features irrelevantes/socket
@@ -41,7 +41,7 @@ VALIDATION_RATIO = 0.1
 TEST_RATIO = 0.2
 TRAIN_RATIO = 0.8
 
-class CICDDoSProcessorV2:
+class CICDDoSProcessor:
     def __init__(self, input_dir=None, output_dir=None):
         if input_dir is None:
             self.input_dir = Path(__file__).parent / "CIC-DDoS2019"
@@ -54,27 +54,27 @@ class CICDDoSProcessorV2:
             self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def find_csv_files(self):
-        csv_files = []
-        for subdir in self.input_dir.iterdir():
-            if subdir.is_dir():
-                csv_files.extend(list(subdir.glob("*.csv")))
-        csv_files.extend(list(self.input_dir.glob("*.csv")))
-        return csv_files
+    def find_data_file(self):
+        # Procura por Parquet, Feather, depois CSV
+        for ext in [".parquet", ".feather", ".csv"]:
+            files = list(self.input_dir.glob(f"*{ext}"))
+            if files:
+                logger.info(f"Ficheiro encontrado: {files[0].name}")
+                return files[0], ext
+        raise FileNotFoundError("Nenhum ficheiro de dados encontrado.")
 
-    def load_and_concat(self):
-        files = self.find_csv_files()
-        logger.info(f"A carregar {len(files)} ficheiros CSV...")
-        dfs = []
-        for f in files:
-            try:
-                df = pd.read_csv(f, low_memory=False)
-                dfs.append(df)
-            except Exception as e:
-                logger.warning(f"Erro ao ler {f}: {e}")
-        data = pd.concat(dfs, ignore_index=True)
-        logger.info(f"Total de amostras carregadas: {data.shape[0]:,}")
-        return data
+    def load_data(self):
+        file_path, ext = self.find_data_file()
+        if ext == ".parquet":
+            df = pd.read_parquet(file_path)
+        elif ext == ".feather":
+            df = pd.read_feather(file_path)
+        elif ext == ".csv":
+            df = pd.read_csv(file_path, low_memory=False)
+        else:
+            raise ValueError("Formato de ficheiro não suportado.")
+        logger.info(f"Total de amostras carregadas: {df.shape[0]:,}")
+        return df, ext
 
     def remove_socket_features(self, df):
         features_removidas = [f for f in SOCKET_FEATURES if f in df.columns]
@@ -164,30 +164,33 @@ class CICDDoSProcessorV2:
         logger.info("Dados e metadados exportados.")
 
     def process(self):
-        # 1. Carregar e concatenar
-        df = self.load_and_concat()
-        # 2. Remover features irrelevantes
+        # 1. Carregar dados
+        df, ext = self.load_data()
+        # 2. Remover features irrelevantes (se existirem)
         df, features_removidas = self.remove_socket_features(df)
-        # 3. Limpar valores em falta/infinitos
-        df, n_missing = self.clean_missing_and_inf(df)
-        # 4. Remover duplicados
-        df, n_dupes = self.remove_duplicates(df)
-        # 5. Criar coluna binária
-        if 'Attack' in df.columns:
-            df['Malicious'] = (df['Attack'] != 'BENIGN').astype(int)
-        elif 'Label' in df.columns:
-            df['Malicious'] = (df['Label'] != 'BENIGN').astype(int)
-        # 6. Seleção aleatória equilibrada
-        label_col = 'Attack' if 'Attack' in df.columns else 'Label'
+        # 3. Limpar valores em falta/infinitos e duplicados apenas para CSV
+        if ext == ".csv":
+            df, n_missing = self.clean_missing_and_inf(df)
+            df, n_dupes = self.remove_duplicates(df)
+        else:
+            n_missing = 0
+            n_dupes = 0
+        # 4. Criar coluna binária
+        label_col = 'Label' if 'Label' in df.columns else ('Attack' if 'Attack' in df.columns else None)
+        if label_col is None:
+            raise ValueError("Coluna de label não encontrada.")
+        df['Malicious'] = (df[label_col] != 'BENIGN').astype(int)
+        # 5. Seleção aleatória equilibrada
         df_subset, class_counts, subset_indices = self.select_balanced_subset(df, label_col=label_col)
-        # 7. Split
+        # 6. Split
         split = self.split_data(df_subset, label_col=label_col, binary_col='Malicious')
         X_train, X_val, X_test, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin = split
-        # 8. Escalonamento
+        # 7. Escalonamento
         features = [c for c in df_subset.columns if c not in [label_col, 'Malicious']]
         X_train_scaled, X_val_scaled, X_test_scaled, scaler = self.scale_features(X_train, X_val, X_test)
-        # 9. Metadados
+        # 8. Metadados
         metainfo = {
+            'formato_ficheiro': ext,
             'total_amostras': int(df.shape[0]),
             'amostras_pos_limpeza': int(df_subset.shape[0]),
             'features_removidas': features_removidas,
@@ -202,15 +205,15 @@ class CICDDoSProcessorV2:
                 'test': int(X_test.shape[0])
             }
         }
-        # 10. Exportar tudo
+        # 9. Exportar tudo
         self.export_all(X_train_scaled, X_val_scaled, X_test_scaled, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin, scaler, features, metainfo)
-        logger.info("Processamento CIC-DDoS2019 v2 concluído.")
-        print("Processamento CIC-DDoS2019 v2 concluído!")
+    logger.info("Processamento CIC-DDoS2019 concluído.")
+    print("Processamento CIC-DDoS2019 concluído!")
         print(f"Amostras finais: {df_subset.shape[0]:,}")
         print(f"Features finais: {len(features)}")
         print(f"Distribuição por classe: {class_counts}")
         print(f"Diretório de saída: {self.output_dir}")
 
 if __name__ == "__main__":
-    processor = CICDDoSProcessorV2()
+    processor = CICDDoSProcessor()
     processor.process()
