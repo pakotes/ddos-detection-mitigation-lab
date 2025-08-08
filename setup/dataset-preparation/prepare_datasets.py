@@ -43,7 +43,7 @@ class DatasetPreparationPipeline:
         self.processors = {
             'nf_unsw': self.script_dir / "process_nf_unsw.py",
             'cic_ddos': self.script_dir / "process_cic_ddos.py",
-            'bot_iot': self.script_dir / "process_bot_iot.py",
+            'cic_bot_iot': self.script_dir / "process_cic_bot_iot.py",
             'integration': self.script_dir / "integrate_datasets.py"
         }
     
@@ -72,13 +72,13 @@ class DatasetPreparationPipeline:
                     'files': len(csv_files),
                     'description': 'Conjunto de dados CIC-DDoS2019 para detecção especializada de DDoS'
                 }
-        # BoT-IoT
-        bot_iot_dir = self.script_dir / "BoT-IoT"
-        if bot_iot_dir.exists() and list(bot_iot_dir.glob("*.csv")):
-            available_datasets['bot_iot'] = {
-                'path': bot_iot_dir,
-                'files': len(list(bot_iot_dir.glob("*.csv"))),
-                'description': 'Conjunto de dados BoT-IoT para detecção de ataques IoT e DDoS'
+        # CIC-BoT-IoT
+        cic_bot_iot_dir = self.script_dir / "CIC-BoT-IoT"
+        if cic_bot_iot_dir.exists() and list(cic_bot_iot_dir.glob("*.csv")):
+            available_datasets['cic_bot_iot'] = {
+                'path': cic_bot_iot_dir,
+                'files': len(list(cic_bot_iot_dir.glob("*.csv"))),
+                'description': 'Conjunto de dados CIC-BoT-IoT para detecção de ataques IoT e DDoS'
             }
         return available_datasets
     

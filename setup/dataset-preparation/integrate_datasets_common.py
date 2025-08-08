@@ -124,7 +124,7 @@ class CommonFeatureIntegrator:
 
 if __name__ == "__main__":
     # Nomes dos datasets processados (ajuste conforme necessário)
-    DATASETS = ["nf_unsw", "cic_ddos", "bot_iot"]
+    DATASETS = ["nf_unsw", "cic_ddos", "cic_bot_iot"]
     integrator = CommonFeatureIntegrator()
     metadata = integrator.integrate(DATASETS)
     print("Integração avançada concluída!")

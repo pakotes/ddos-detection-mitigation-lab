@@ -31,9 +31,10 @@ Este documento identifica os datasets utilizados, como descarregar manualmente, 
 ---
 
 ## CIC-BoT-IoT
-- **Fonte**: [Kaggle - CIC-BoT-IoT](https://www.kaggle.com/datasets/dhoogla/cicbotiot)
+- **Fonte**: UNSW-BoT-IoT, with CICFlowmeter features, by the University of Queensland
 - **Autores**: Dr. Mohanad Sarhan, Dr. Siamak Layeghy & Dr. Marius Portmann
 - **Preprint**: [arXiv:2104.07183](https://arxiv.org/abs/2104.07183)
+- **Download**: [Kaggle - CIC-BoT-IoT (limpo e tratado)](https://www.kaggle.com/datasets/dhoogla/cicbotiot)
 - **Como obter**: Descarregar e extrair para `setup/dataset-preparation/CIC-BoT-IoT/`
 - **Estrutura**:
   ```
