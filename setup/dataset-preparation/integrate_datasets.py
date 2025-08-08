@@ -21,20 +21,20 @@ logger = logging.getLogger(__name__)
 
 class DatasetIntegrator:
     """
-    Integrates processed datasets for multi-faceted security analysis.
-    
-    This class handles the integration of different network security datasets
-    to create comprehensive training configurations that can address both
-    general intrusion detection and specialized DDoS detection.
+    Integra conjuntos de dados processados para análise de segurança multifacetada.
+
+    Esta classe gere a integração de diferentes conjuntos de dados de segurança de rede
+    para criar configurações de treino abrangentes, capazes de abordar tanto a deteção geral de intrusões
+    como a deteção especializada de DDoS.
     """
     
     def __init__(self, processed_dir=None, output_dir=None):
         """
-        Initialize the dataset integrator.
-        
+        Inicializa o integrador de conjuntos de dados.
+
         Args:
-            processed_dir: Directory containing processed individual datasets
-            output_dir: Directory to save integrated dataset configurations
+            processed_dir: Diretório com os datasets individuais processados
+            output_dir: Diretório para guardar as configurações integradas
         """
         if processed_dir is None:
             base_dir = Path(__file__).parent.parent.parent
@@ -50,7 +50,7 @@ class DatasetIntegrator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def load_dataset(self, dataset_name):
-        """Load a processed dataset by name"""
+        """Carrega um conjunto de dados processado pelo nome"""
         try:
             X_file = self.processed_dir / f"X_{dataset_name}.npy"
             y_file = self.processed_dir / f"y_{dataset_name}.npy"
@@ -74,10 +74,9 @@ class DatasetIntegrator:
     
     def align_features(self, datasets):
         """
-        Align feature dimensions across datasets.
-        
-        This method handles datasets with different feature counts by either
-        padding with zeros or truncating to the minimum common feature set.
+        Alinha as dimensões das features entre datasets.
+
+        Este método trata datasets com diferentes números de features, preenchendo com zeros ou truncando para o conjunto mínimo comum.
         """
         if not datasets:
             return []
@@ -109,10 +108,9 @@ class DatasetIntegrator:
     
     def create_ensemble_separate_config(self, datasets):
         """
-        Create ensemble configuration with separate datasets.
-        
-        This maintains dataset boundaries for ensemble learning where
-        different models can be trained on different datasets.
+        Cria configuração ensemble mantendo datasets separados.
+
+        Mantém as fronteiras dos datasets para aprendizagem ensemble, onde diferentes modelos podem ser treinados em diferentes datasets.
         """
         logger.info("Creating ensemble separate configuration")
         
@@ -156,9 +154,9 @@ class DatasetIntegrator:
     
     def create_combined_config(self, datasets):
         """
-        Create combined dataset configuration.
-        
-        This merges all datasets into a single training set for unified model training.
+        Cria configuração de dataset combinado.
+
+        Junta todos os datasets num único conjunto de treino para treino unificado de modelos.
         """
         logger.info("Creating combined dataset configuration")
         
@@ -207,8 +205,8 @@ class DatasetIntegrator:
         return combined_metadata
     
     def create_individual_configs(self, datasets):
-        """Create individual dataset configurations for specialized training"""
-        logger.info("Creating individual dataset configurations")
+        """Cria configurações individuais para treino especializado"""
+        logger.info("A criar configurações individuais de datasets")
         
         individual_metadata = []
         
@@ -240,8 +238,8 @@ class DatasetIntegrator:
         return individual_metadata
     
     def integrate_datasets(self):
-        """Execute the complete dataset integration process"""
-        logger.info("Starting dataset integration process")
+        """Executa o processo completo de integração de datasets"""
+        logger.info("Início do processo de integração de datasets")
         
         # Try to load available datasets
         available_datasets = []
@@ -305,40 +303,40 @@ class DatasetIntegrator:
         return integration_summary
 
 def main():
-    """Execute the dataset integration pipeline"""
-    print("Dataset Integration Module")
+    """Executa o pipeline de integração de datasets"""
+    print("Módulo de Integração de Datasets")
     print("=" * 50)
-    
+
     try:
         integrator = DatasetIntegrator()
-        
-        # Check if processed data exists
+
+        # Verificar se existem dados processados
         if not integrator.processed_dir.exists():
-            print(f"Error: Processed data directory not found: {integrator.processed_dir}")
-            print("Please run individual dataset processors first.")
+            print(f"Erro: Diretório de dados processados não encontrado: {integrator.processed_dir}")
+            print("Por favor, execute primeiro os processadores individuais de datasets.")
             return False
-        
-        # Execute integration
+
+        # Executar integração
         summary = integrator.integrate_datasets()
-        
-        # Print results
-        print("\nIntegration Summary:")
-        print(f"Source datasets: {summary['source_datasets']}")
-        print(f"Total samples: {summary['total_samples']:,}")
-        print(f"Feature count: {summary['feature_count']}")
-        print(f"Configurations created: {len(summary['configurations_created'])}")
-        
+
+        # Imprimir resultados
+        print("\nResumo da Integração:")
+        print(f"Datasets de origem: {summary['source_datasets']}")
+        print(f"Total de amostras: {summary['total_samples']:,}")
+        print(f"Número de features: {summary['feature_count']}")
+        print(f"Configurações criadas: {len(summary['configurations_created'])}")
+
         for config_name in summary['configurations_created']:
             print(f"  - {config_name}")
-        
-        print(f"Output directory: {integrator.output_dir}")
-        
-        logger.info("Dataset integration completed successfully")
+
+        print(f"Diretório de saída: {integrator.output_dir}")
+
+        logger.info("Integração de datasets concluída com sucesso")
         return True
-        
+
     except Exception as e:
-        logger.error(f"Integration failed: {str(e)}")
-        print(f"\nError: {str(e)}")
+        logger.error(f"Falha na integração: {str(e)}")
+        print(f"\nErro: {str(e)}")
         return False
 
 if __name__ == "__main__":

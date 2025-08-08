@@ -78,21 +78,19 @@ logger = logging.getLogger(__name__)
 
 class CICDDoSProcessor:
     """
-    Processa o conjunto de dados CIC-DDoS2019 para detecção de ataques DDoS.
-    
-    Este processador é concebido para tratar o conjunto completo CIC-DDoS2019
-    incluindo tanto amostras de ataque como amostras cruciais de tráfego BENIGN
-    necessárias para classificação binária adequada.
+    Processador do conjunto de dados CIC-DDoS2019 para deteção de ataques DDoS.
+    Este processador foi concebido para tratar o conjunto completo CIC-DDoS2019,
+    incluindo amostras de ataque e amostras cruciais de tráfego BENIGN necessárias para classificação binária realista.
     """
     
     def __init__(self, input_dir=None, output_dir=None, batch_size=50000):
         """
-        Initialize the CIC-DDoS processor.
+        Inicializa o processador CIC-DDoS2019.
         
         Args:
-            input_dir: Path to CIC-DDoS2019 dataset directory
-            output_dir: Path to save processed data
-            batch_size: Number of samples to process in each batch
+            input_dir: Caminho para o diretório do dataset CIC-DDoS2019
+            output_dir: Caminho para guardar os dados processados
+            batch_size: Número de amostras a processar em cada batch
         """
         if input_dir is None:
             # Use local dataset directory
@@ -110,7 +108,7 @@ class CICDDoSProcessor:
         self.batch_size = batch_size
     
     def find_csv_files(self):
-        """Locate all CSV files in the dataset directory structure"""
+        """Localiza todos os ficheiros CSV na estrutura de diretórios do dataset"""
         csv_files = []
         
         # Search in subdirectories (01-12, 03-11, etc.)
@@ -128,7 +126,7 @@ class CICDDoSProcessor:
         return csv_files
     
     def analyze_data_structure(self, csv_files):
-        """Analyze the first file to understand data structure"""
+        """Analisa o primeiro ficheiro para compreender a estrutura dos dados"""
         first_file = csv_files[0]
         logger.info(f"Analyzing data structure using {first_file.name}")
         
@@ -165,7 +163,7 @@ class CICDDoSProcessor:
         return label_col, numeric_features
     
     def process_chunk(self, chunk, label_col, numeric_features):
-        """Processa um chunk de dados, ignorando linhas não numéricas ou headers duplicados, e garantindo sempre as mesmas colunas."""
+        """Processa um lote de dados, ignora linhas não numéricas ou headers duplicados e garante sempre as mesmas colunas."""
         if chunk.empty:
             return None, None
 
@@ -211,13 +209,13 @@ class CICDDoSProcessor:
         return X_chunk.values, y_binary.values
     
     def load_and_preprocess(self):
-        """Processa cada ficheiro individualmente, guarda batches temporários, e só junta tudo no final."""
-        logger.info("Starting CIC-DDoS2019 dataset processing (file-by-file, temp storage)")
+        """Processa cada ficheiro individualmente, guarda batches temporários e só junta tudo no final."""
+        logger.info("Início do processamento do dataset CIC-DDoS2019 (ficheiro a ficheiro, armazenamento temporário)")
 
-        # Find all CSV files
+        # Encontrar todos os ficheiros CSV
         csv_files = self.find_csv_files()
 
-        # Analyze data structure
+        # Analisar estrutura dos dados
         label_col, numeric_features = self.analyze_data_structure(csv_files)
 
         temp_dir = self.output_dir / "tmp_cic_ddos"
@@ -227,7 +225,7 @@ class CICDDoSProcessor:
         total_samples = 0
 
         for file_idx, csv_file in enumerate(csv_files):
-            logger.info(f"Processing file {file_idx + 1}/{len(csv_files)}: {csv_file.name}")
+            logger.info(f"A processar ficheiro {file_idx + 1}/{len(csv_files)}: {csv_file.name}")
             file_X_batches = []
             file_y_batches = []
             try:
@@ -239,7 +237,7 @@ class CICDDoSProcessor:
                         file_y_batches.append(y_chunk)
                         total_samples += len(X_chunk)
                     if (chunk_idx + 1) % 10 == 0:
-                        logger.info(f"  Processed {(chunk_idx + 1) * self.batch_size:,} rows in {csv_file.name}")
+                        logger.info(f"  Processadas {(chunk_idx + 1) * self.batch_size:,} linhas em {csv_file.name}")
                 # Guardar batches deste ficheiro em ficheiros temporários
                 if file_X_batches:
                     X_file = temp_dir / f"X_{file_idx}.npy"
@@ -251,14 +249,14 @@ class CICDDoSProcessor:
                 del file_X_batches, file_y_batches
                 gc.collect()
             except Exception as e:
-                logger.warning(f"Error processing {csv_file.name}: {str(e)}")
+                logger.warning(f"Erro ao processar {csv_file.name}: {str(e)}")
                 continue
 
         if not temp_X_files:
-            raise ValueError("No valid data was processed from any file")
+            raise ValueError("Nenhum dado válido foi processado de nenhum ficheiro")
 
         # Juntar todos os ficheiros temporários
-        logger.info("Combining all processed data from temp files")
+        logger.info("A combinar todos os dados processados dos ficheiros temporários")
         X_list = [np.load(f) for f in temp_X_files]
         y_list = [np.load(f) for f in temp_y_files]
         X_final = np.vstack(X_list)
@@ -281,96 +279,96 @@ class CICDDoSProcessor:
         except Exception:
             pass
 
-        # Calculate statistics
+        # Estatísticas
         benign_count = (y_final == 0).sum()
         attack_count = (y_final == 1).sum()
         attack_ratio = attack_count / len(y_final)
 
-        logger.info(f"Dataset processing complete:")
-        logger.info(f"  Total samples: {len(y_final):,}")
+        logger.info(f"Processamento do dataset concluído:")
+        logger.info(f"  Total de amostras: {len(y_final):,}")
         logger.info(f"  Features: {X_final.shape[1]}")
-        logger.info(f"  BENIGN samples: {benign_count:,} ({(1-attack_ratio)*100:.1f}%)")
-        logger.info(f"  Attack samples: {attack_count:,} ({attack_ratio*100:.1f}%)")
+        logger.info(f"  Amostras BENIGN: {benign_count:,} ({(1-attack_ratio)*100:.1f}%)")
+        logger.info(f"  Amostras de ataque: {attack_count:,} ({attack_ratio*100:.1f}%)")
 
         gc.collect()
         return X_final, y_final, final_features
     
     def save_processed_data(self, X, y, feature_names):
-        """Save processed data to disk"""
-        logger.info("Saving processed CIC-DDoS2019 data")
-        
-        # Save raw processed data
+        """Guarda os dados processados em disco"""
+        logger.info("A guardar dados processados do CIC-DDoS2019")
+
+        # Guardar dados processados
         np.save(self.output_dir / "X_cic_ddos.npy", X)
         np.save(self.output_dir / "y_cic_ddos.npy", y)
-        
-        # Create and save feature scaler
+
+        # Criar e guardar scaler de features
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         np.save(self.output_dir / "X_cic_ddos_scaled.npy", X_scaled)
-        
-        # Save scaler for future use
+
+        # Guardar scaler para uso futuro
         with open(self.output_dir / "scaler_cic_ddos.pkl", 'wb') as f:
             pickle.dump(scaler, f)
-        
-        # Save feature names
+
+        # Guardar nomes das features
         with open(self.output_dir / "feature_names_cic_ddos.txt", 'w') as f:
             f.write('\n'.join(feature_names))
-        
-        # Create and save metadata
+
+        # Criar e guardar metadados
         metadata = {
             'dataset': 'CIC-DDoS2019',
-            'processing_date': pd.Timestamp.now().isoformat(),
-            'total_samples': int(len(y)),
-            'feature_count': int(X.shape[1]),
-            'benign_samples': int((y == 0).sum()),
-            'attack_samples': int((y == 1).sum()),
-            'attack_percentage': float((y == 1).mean() * 100),
-            'feature_names': feature_names,
-            'description': 'CIC-DDoS2019 dataset processed for DDoS detection with BENIGN traffic included'
+            'data_processamento': pd.Timestamp.now().isoformat(),
+            'total_amostras': int(len(y)),
+            'num_features': int(X.shape[1]),
+            'amostras_benignas': int((y == 0).sum()),
+            'amostras_ataque': int((y == 1).sum()),
+            'percentagem_ataque': float((y == 1).mean() * 100),
+            'nomes_features': feature_names,
+            'descricao': 'Dataset CIC-DDoS2019 processado para deteção de DDoS com tráfego BENIGN incluído'
         }
-        
+
         with open(self.output_dir / "metadata_cic_ddos.json", 'w') as f:
             json.dump(metadata, f, indent=2)
-        
-        logger.info(f"All data saved to: {self.output_dir}")
+
+        logger.info(f"Todos os dados guardados em: {self.output_dir}")
         return metadata
 
 def main():
-    """Execute the CIC-DDoS2019 processing pipeline"""
-    print("CIC-DDoS2019 Dataset Processor")
+    """Executa o pipeline de processamento do CIC-DDoS2019"""
+    print("Processador do Dataset CIC-DDoS2019")
     print("=" * 50)
-    
+
     try:
         processor = CICDDoSProcessor()
-        
-        # Verify input directory exists
+
+        # Verificar se o diretório de input existe
         if not processor.input_dir.exists():
-            print(f"Error: Input directory not found: {processor.input_dir}")
-            print("Please ensure the CIC-DDoS2019 dataset is available in the correct location.")
+            print(f"Erro: Diretório de input não encontrado: {processor.input_dir}")
+            print("Por favor, certifique-se que o dataset CIC-DDoS2019 está disponível no local correto.")
             return False
-        
-        # Process the dataset
+
+        # Processar o dataset
         X, y, feature_names = processor.load_and_preprocess()
-        
-        # Save processed data
+
+        # Guardar dados processados
         metadata = processor.save_processed_data(X, y, feature_names)
-        
-        # Print summary
-        print("\nProcessing Summary:")
+
+        # Resumo
+        print("\nResumo do Processamento:")
         print(f"Dataset: {metadata['dataset']}")
-        print(f"Total samples: {metadata['total_samples']:,}")
-        print(f"Features: {metadata['feature_count']}")
-        print(f"BENIGN traffic: {metadata['benign_samples']:,}")
-        print(f"DDoS attacks: {metadata['attack_samples']:,}")
-        print(f"Attack ratio: {metadata['attack_percentage']:.1f}%")
-        print(f"Output directory: {processor.output_dir}")
-        
-        logger.info("CIC-DDoS2019 processing completed successfully")
+        print(f"Total de amostras: {metadata['total_amostras']:,}")
+        print(f"Features: {metadata['num_features']}")
+        print(f"Tráfego BENIGN: {metadata['amostras_benignas']:,}")
+        print(f"Ataques DDoS: {metadata['amostras_ataque']:,}")
+        print(f"Percentagem de ataque: {metadata['percentagem_ataque']:.1f}%")
+        print(f"Diretório de output: {processor.output_dir}")
+
+        logger.info("Processamento do CIC-DDoS2019 concluído com sucesso")
         return True
-        
+
     except Exception as e:
-        logger.error(f"Processing failed: {str(e)}")
-        print(f"\nError: {str(e)}")
+        logger.error(f"Falha no processamento: {str(e)}")
+        print(f"\nErro: {str(e)}")
         return False
 
 if __name__ == "__main__":

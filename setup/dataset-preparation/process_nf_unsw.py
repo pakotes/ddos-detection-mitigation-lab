@@ -22,203 +22,206 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class NFUNSWProcessor:
-    """Processa o conjunto de dados NF-UNSW-NB15-v3 para detecção de intrusões"""
+    """
+    Processador do conjunto de dados NF-UNSW-NB15-v3 para deteção de intrusões.
+    Realiza o carregamento, limpeza, codificação e exportação dos dados prontos para treino de modelos.
+    """
     
     def __init__(self, input_dir=None, output_dir=None):
         if input_dir is None:
-            # Use local dataset directory
+            # Usar diretório local do dataset
             self.input_dir = Path(__file__).parent / "NF-UNSW-NB15-v3"
         else:
             self.input_dir = Path(input_dir)
-            
+
         if output_dir is None:
             base_dir = Path(__file__).parent.parent.parent
             self.output_dir = base_dir / "src" / "datasets" / "processed"
         else:
             self.output_dir = Path(output_dir)
-            
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def load_and_preprocess(self):
-        """Load and preprocess NF-UNSW-NB15-v3 data"""
-        logger.info("Starting NF-UNSW-NB15-v3 processing...")
-        
-        # Find CSV files
+        """Carrega e pré-processa os dados NF-UNSW-NB15-v3"""
+        logger.info("Início do processamento do NF-UNSW-NB15-v3...")
+
+        # Procurar ficheiros CSV
         csv_files = list(self.input_dir.glob("*.csv"))
         if not csv_files:
-            raise FileNotFoundError(f"No CSV files found in {self.input_dir}")
-        
-        logger.info(f"Found {len(csv_files)} CSV files")
-        
+            raise FileNotFoundError(f"Não foram encontrados ficheiros CSV em {self.input_dir}")
+
+        logger.info(f"Foram encontrados {len(csv_files)} ficheiros CSV")
+
         dataframes = []
         for csv_file in csv_files:
-            logger.info(f"Loading {csv_file.name}...")
+            logger.info(f"A carregar {csv_file.name}...")
             try:
                 df = pd.read_csv(csv_file, low_memory=False)
                 if not df.empty:
                     dataframes.append(df)
-                    logger.info(f"   Loaded {df.shape[0]:,} rows, {df.shape[1]} columns")
+                    logger.info(f"   Carregadas {df.shape[0]:,} linhas, {df.shape[1]} colunas")
             except Exception as e:
-                logger.warning(f"   Error loading {csv_file.name}: {e}")
-        
+                logger.warning(f"   Erro ao carregar {csv_file.name}: {e}")
+
         if not dataframes:
-            raise ValueError("No valid files loaded")
-        
-        # Combine datasets
-        logger.info("Combining datasets...")
+            raise ValueError("Nenhum ficheiro válido foi carregado")
+
+        # Combinar datasets
+        logger.info("A combinar datasets...")
         df_combined = pd.concat(dataframes, ignore_index=True)
-        logger.info(f"Combined dataset: {df_combined.shape[0]:,} rows, {df_combined.shape[1]} columns")
-        
+        logger.info(f"Dataset combinado: {df_combined.shape[0]:,} linhas, {df_combined.shape[1]} colunas")
+
         return self._preprocess_features(df_combined)
     
     def _preprocess_features(self, df):
-        """Preprocess dataset features"""
-        logger.info("Preprocessing features...")
-        
-        # Identify label column
+        """Pré-processa as features do dataset"""
+        logger.info("Pré-processamento das features...")
+
+        # Identificar coluna de label
         label_candidates = ['Label', ' Label', 'label', 'attack', 'Attack']
         label_col = None
         for col in label_candidates:
             if col in df.columns:
                 label_col = col
                 break
-        
+
         if label_col is None:
-            raise ValueError("Label column not found")
-        
-        logger.info(f"Using label column: {label_col}")
-        
-        # Separate features and labels
+            raise ValueError("Coluna de label não encontrada")
+
+        logger.info(f"A usar coluna de label: {label_col}")
+
+        # Separar features e labels
         feature_cols = [col for col in df.columns if col != label_col]
-        
-        # Process labels
+
+        # Processar labels
         y_raw = df[label_col]
         if y_raw.dtype == 'object':
-            # Categorical labels
+            # Labels categóricos
             normal_labels = ['BENIGN', 'Normal', 'normal', 'NORMAL']
             y_binary = (~y_raw.isin(normal_labels)).astype(int)
-            logger.info("Converted categorical labels to binary")
+            logger.info("Convertidos labels categóricos para binário")
         else:
-            # Numeric labels
+            # Labels numéricos
             y_binary = (y_raw != 0).astype(int)
-            logger.info("Processed numeric labels")
-        
-        # Process features
+            logger.info("Labels numéricos processados")
+
+        # Processar features
         X = df[feature_cols].copy()
-        
-        # Select only numeric columns
+
+        # Selecionar apenas colunas numéricas
         numeric_cols = X.select_dtypes(include=[np.number]).columns
         X_numeric = X[numeric_cols].copy()
-        
-        # Process simple categorical columns
+
+        # Codificar colunas categóricas simples
         categorical_cols = X.select_dtypes(exclude=[np.number]).columns
         if len(categorical_cols) > 0:
-            logger.info(f"Processing {len(categorical_cols)} categorical columns...")
+            logger.info(f"A codificar {len(categorical_cols)} colunas categóricas...")
             for col in categorical_cols:
                 unique_count = X[col].nunique()
-                if unique_count < 50:  # Reasonable limit
+                if unique_count < 50:  # Limite razoável
                     try:
                         le = LabelEncoder()
-                        X_numeric[f"{col}_encoded"] = le.fit_transform(X[col].fillna('unknown'))
-                        logger.info(f"   Encoded {col} ({unique_count} values)")
+                        X_numeric[f"{col}_codificada"] = le.fit_transform(X[col].fillna('desconhecido'))
+                        logger.info(f"   Codificada {col} ({unique_count} valores)")
                     except:
-                        logger.warning(f"   Error encoding {col}")
-        
-        # Clean data
-        logger.info("Cleaning data...")
-        
-        # Handle infinities
+                        logger.warning(f"   Erro ao codificar {col}")
+
+        # Limpeza de dados
+        logger.info("A limpar dados...")
+
+        # Tratar infinitos
         X_numeric = X_numeric.replace([np.inf, -np.inf], np.nan)
-        
-        # Handle missing values
+
+        # Tratar valores em falta
         missing_count = X_numeric.isnull().sum().sum()
         if missing_count > 0:
             X_numeric = X_numeric.fillna(X_numeric.median())
-            logger.info(f"   Filled {missing_count} missing values")
-        
-        # Remove zero variance features
+            logger.info(f"   Preenchidos {missing_count} valores em falta")
+
+        # Remover features de variância zero
         variance = X_numeric.var()
         zero_var_cols = variance[variance == 0].index
         if len(zero_var_cols) > 0:
             X_numeric = X_numeric.drop(columns=zero_var_cols)
-            logger.info(f"   Removed {len(zero_var_cols)} zero variance features")
-        
-        # Final statistics
+            logger.info(f"   Removidas {len(zero_var_cols)} features de variância zero")
+
+        # Estatísticas finais
         attack_count = y_binary.sum()
         normal_count = len(y_binary) - attack_count
         attack_ratio = attack_count / len(y_binary)
-        
-        logger.info(f"Final dataset: {X_numeric.shape[0]:,} samples, {X_numeric.shape[1]} features")
-        logger.info(f"Normal: {normal_count:,} ({1-attack_ratio:.1%})")
-        logger.info(f"Attacks: {attack_count:,} ({attack_ratio:.1%})")
-        
+
+        logger.info(f"Dataset final: {X_numeric.shape[0]:,} amostras, {X_numeric.shape[1]} features")
+        logger.info(f"Normais: {normal_count:,} ({1-attack_ratio:.1%})")
+        logger.info(f"Ataques: {attack_count:,} ({attack_ratio:.1%})")
+
         return X_numeric.values, y_binary.values, list(X_numeric.columns)
     
     def save_processed_data(self, X, y, feature_names):
-        """Save processed data to disk"""
-        logger.info("Saving processed data...")
-        
-        # Save processed arrays
+        """Guarda os dados processados em disco"""
+        logger.info("A guardar dados processados...")
+
+        # Guardar arrays processados
         np.save(self.output_dir / "X_nf_unsw.npy", X)
         np.save(self.output_dir / "y_nf_unsw.npy", y)
-        
-        # Scale features
+
+        # Normalizar features
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
-        
-        # Save scaled data
+
+        # Guardar dados normalizados
         np.save(self.output_dir / "X_nf_unsw_scaled.npy", X_scaled)
-        
-        # Save scaler
+
+        # Guardar scaler
         with open(self.output_dir / "scaler_nf_unsw.pkl", 'wb') as f:
             pickle.dump(scaler, f)
-        
-        # Save feature names
+
+        # Guardar nomes das features
         with open(self.output_dir / "feature_names_nf_unsw.txt", 'w') as f:
             f.write('\n'.join(feature_names))
-        
-        # Save metadata
+
+        # Guardar metadados
         metadata = {
             'dataset': 'NF-UNSW-NB15-v3',
-            'samples': int(X.shape[0]),
+            'amostras': int(X.shape[0]),
             'features': int(X.shape[1]),
-            'attack_samples': int(y.sum()),
-            'normal_samples': int(len(y) - y.sum()),
-            'attack_ratio': float(y.sum() / len(y)),
-            'feature_names': feature_names
+            'amostras_ataque': int(y.sum()),
+            'amostras_normais': int(len(y) - y.sum()),
+            'percentagem_ataque': float(y.sum() / len(y)),
+            'nomes_features': feature_names
         }
-        
+
         with open(self.output_dir / "metadata_nf_unsw.json", 'w') as f:
             json.dump(metadata, f, indent=2)
-        
-        logger.info(f"Data saved to {self.output_dir}")
-        logger.info(f"Total samples: {X.shape[0]:,}")
+
+        logger.info(f"Dados guardados em {self.output_dir}")
+        logger.info(f"Total de amostras: {X.shape[0]:,}")
         logger.info(f"Features: {X.shape[1]}")
-        
+
         return metadata
 
 def main():
-    """Execute the NF-UNSW-NB15-v3 processing pipeline"""
+    """Executa o pipeline de processamento do NF-UNSW-NB15-v3"""
     try:
         processor = NFUNSWProcessor()
-        
-        # Check if input directory exists
+
+        # Verificar se o diretório de input existe
         if not processor.input_dir.exists():
-            logger.error(f"Input directory not found: {processor.input_dir}")
-            logger.info("Please ensure NF-UNSW-NB15-v3 dataset is available")
+            logger.error(f"Diretório de input não encontrado: {processor.input_dir}")
+            logger.info("Por favor, certifique-se que o dataset NF-UNSW-NB15-v3 está disponível")
             return False
-        
-        # Process data
+
+        # Processar dados
         X, y, feature_names = processor.load_and_preprocess()
-        
-        # Save processed data
+
+        # Guardar dados processados
         metadata = processor.save_processed_data(X, y, feature_names)
-        
-        logger.info("NF-UNSW-NB15-v3 processing completed successfully")
+
+        logger.info("Processamento do NF-UNSW-NB15-v3 concluído com sucesso")
         return True
-        
+
     except Exception as e:
-        logger.error(f"Processing failed: {e}")
+        logger.error(f"Falha no processamento: {e}")
         return False
 
 if __name__ == "__main__":

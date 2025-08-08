@@ -83,7 +83,7 @@ class DatasetPreparationPipeline:
         return available_datasets
     
     def run_processor(self, processor_name, script_path):
-        """Executar um script de processamento de conjunto de dados, mostrando o progresso em tempo real."""
+        """Executa um script de processamento de conjunto de dados, mostrando o progresso em tempo real."""
         logger.info(f"A iniciar processador {processor_name}")
         try:
             process = subprocess.Popen(
@@ -106,27 +106,27 @@ class DatasetPreparationPipeline:
                 logger.info(f"Processador {processor_name} completado com sucesso")
                 return True
             else:
-                logger.error(f"Processador {processor_name} falhou (return code {returncode})")
+                logger.error(f"Processador {processor_name} falhou (código de retorno {returncode})")
                 return False
         except Exception as e:
-            logger.error(f"Error running {processor_name} processor: {str(e)}")
+            logger.error(f"Erro ao executar o processador {processor_name}: {str(e)}")
             return False
     
     def verify_processed_output(self, processor_name):
-        """Verify that a processor generated the expected output files"""
+        """Verifica se um processador gerou os ficheiros de saída esperados"""
         expected_files = [
             f"X_{processor_name}.npy",
             f"y_{processor_name}.npy",
             f"metadata_{processor_name}.json"
         ]
-        
+
         for filename in expected_files:
             file_path = self.processed_dir / filename
             if not file_path.exists():
-                logger.warning(f"Expected output file missing: {filename}")
+                logger.warning(f"Ficheiro de saída esperado em falta: {filename}")
                 return False
-        
-        logger.info(f"Verified output files for {processor_name}")
+
+        logger.info(f"Ficheiros de saída verificados para {processor_name}")
         return True
     
     def generate_processing_report(self, results, available_datasets):

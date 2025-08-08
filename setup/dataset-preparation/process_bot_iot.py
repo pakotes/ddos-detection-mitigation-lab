@@ -2,9 +2,8 @@
 """
 Processador do Conjunto de Dados BoT-IoT
 
-Este módulo processa o conjunto de dados BoT-IoT para detecção de ataques IoT e DDoS.
+Este módulo processa o conjunto de dados BoT-IoT para deteção de ataques IoT e DDoS.
 Inclui carregamento, pré-processamento, engenharia de características e exportação em formato compatível com o pipeline do laboratório.
-
 """
 
 import pandas as pd
@@ -30,10 +29,12 @@ class BoTIoTProcessor:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def find_csv_files(self):
+        """Procura todos os ficheiros CSV no diretório de input."""
         csv_files = list(self.input_dir.glob("*.csv"))
         return csv_files
 
     def process(self):
+        """Processa o conjunto de dados BoT-IoT e guarda os resultados em disco."""
         logger.info("A processar BoT-IoT...")
         csv_files = self.find_csv_files()
         if not csv_files:
@@ -47,7 +48,7 @@ class BoTIoTProcessor:
             dfs.append(df)
         data = pd.concat(dfs, ignore_index=True)
 
-        # Identificar colunas numéricas e categóricas
+        # Identificar colunas categóricas
         categorical_cols = [
             'proto', 'flgs', 'state', 'smac', 'dmac', 'saddr', 'daddr', 'category', 'subcategory', 'stime', 'ltime'
         ]
@@ -59,11 +60,11 @@ class BoTIoTProcessor:
         np.save(self.output_dir / "X_bot_iot.npy", X)
         np.save(self.output_dir / "y_bot_iot.npy", y)
         metadata = {
-            "columns": list(data.columns),
-            "feature_columns": feature_cols,
-            "categorical_columns": [col for col in categorical_cols if col in data.columns],
-            "target": "attack",
-            "shape": X.shape
+            "colunas": list(data.columns),
+            "colunas_features": feature_cols,
+            "colunas_categoricas": [col for col in categorical_cols if col in data.columns],
+            "alvo": "attack",
+            "dimensao": X.shape
         }
         with open(self.output_dir / "metadata_bot_iot.json", "w") as f:
             json.dump(metadata, f, indent=2)

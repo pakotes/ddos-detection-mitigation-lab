@@ -17,8 +17,11 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+
 # Variáveis
-PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
+# Determinar a raiz do projeto (diretório pai de onde está este script)
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 LOG_FILE="/tmp/ddos-setup.log"
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $1" | tee -a "$LOG_FILE"; }
@@ -29,7 +32,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"; }
 show_header() {
     echo -e "${CYAN}"
     echo "╔═════════════════════════════════════════════════════════════════════╗"
-    echo "║           ddos-detection-mitigation-lab - Setup Automático          ║"
+    echo "║            Ddos Detection & Mitigation - Setup Automático           ║"
     echo "║                          Linux Installation                         ║"
     echo "╚═════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
