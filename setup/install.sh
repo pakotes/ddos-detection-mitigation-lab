@@ -137,6 +137,7 @@ EOF
     else
         pip3 install -r "${PROJECT_ROOT}/requirements.txt" --user
     fi
+        pip install pyarrow fastparquet --user
     
     log_success "Dependências ML instaladas"
 }
