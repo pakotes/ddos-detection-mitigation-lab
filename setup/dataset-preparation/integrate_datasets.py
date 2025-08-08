@@ -250,12 +250,17 @@ class DatasetIntegrator:
         X_nf, y_nf, meta_nf = self.load_dataset("nf_unsw")
         if X_nf is not None:
             available_datasets.append((X_nf, y_nf, meta_nf))
-        
+
         # Load CIC-DDoS dataset
         X_cic, y_cic, meta_cic = self.load_dataset("cic_ddos")
         if X_cic is not None:
             available_datasets.append((X_cic, y_cic, meta_cic))
-        
+
+        # Load BoT-IoT dataset
+        X_bot, y_bot, meta_bot = self.load_dataset("bot_iot")
+        if X_bot is not None:
+            available_datasets.append((X_bot, y_bot, meta_bot))
+
         if not available_datasets:
             raise ValueError("No processed datasets found for integration")
         

@@ -43,14 +43,14 @@ class DatasetPreparationPipeline:
         self.processors = {
             'nf_unsw': self.script_dir / "process_nf_unsw.py",
             'cic_ddos': self.script_dir / "process_cic_ddos.py",
+            'bot_iot': self.script_dir / "process_bot_iot.py",
             'integration': self.script_dir / "integrate_datasets.py"
         }
     
     def check_dataset_availability(self):
         """Verificar que conjuntos de dados estão disponíveis para processamento"""
         available_datasets = {}
-        
-        # Check for NF-UNSW-NB15-v3 (local directory)
+        # NF-UNSW-NB15-v3
         nf_unsw_dir = self.script_dir / "NF-UNSW-NB15-v3"
         if nf_unsw_dir.exists() and list(nf_unsw_dir.glob("*.csv")):
             available_datasets['nf_unsw'] = {
@@ -58,8 +58,7 @@ class DatasetPreparationPipeline:
                 'files': len(list(nf_unsw_dir.glob("*.csv"))),
                 'description': 'Conjunto de dados NetFlow NF-UNSW-NB15-v3 para detecção geral de intrusões'
             }
-        
-        # Check for CIC-DDoS2019 (local directory)
+        # CIC-DDoS2019
         cic_ddos_dir = self.script_dir / "CIC-DDoS2019"
         if cic_ddos_dir.exists():
             csv_files = []
@@ -67,14 +66,20 @@ class DatasetPreparationPipeline:
                 if subdir.is_dir():
                     csv_files.extend(list(subdir.glob("*.csv")))
             csv_files.extend(list(cic_ddos_dir.glob("*.csv")))
-            
             if csv_files:
                 available_datasets['cic_ddos'] = {
                     'path': cic_ddos_dir,
                     'files': len(csv_files),
                     'description': 'Conjunto de dados CIC-DDoS2019 para detecção especializada de DDoS'
                 }
-        
+        # BoT-IoT
+        bot_iot_dir = self.script_dir / "BoT-IoT"
+        if bot_iot_dir.exists() and list(bot_iot_dir.glob("*.csv")):
+            available_datasets['bot_iot'] = {
+                'path': bot_iot_dir,
+                'files': len(list(bot_iot_dir.glob("*.csv"))),
+                'description': 'Conjunto de dados BoT-IoT para detecção de ataques IoT e DDoS'
+            }
         return available_datasets
     
     def run_processor(self, processor_name, script_path):

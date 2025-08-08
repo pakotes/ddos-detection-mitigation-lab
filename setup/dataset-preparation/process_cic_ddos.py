@@ -85,7 +85,7 @@ class CICDDoSProcessor:
     necessárias para classificação binária adequada.
     """
     
-    def __init__(self, input_dir=None, output_dir=None, batch_size=10000):
+    def __init__(self, input_dir=None, output_dir=None, batch_size=50000):
         """
         Initialize the CIC-DDoS processor.
         
@@ -211,8 +211,8 @@ class CICDDoSProcessor:
         return X_chunk.values, y_binary.values
     
     def load_and_preprocess(self):
-        """Load and preprocess the complete CIC-DDoS2019 dataset, garantindo sempre as mesmas colunas."""
-        logger.info("Starting CIC-DDoS2019 dataset processing")
+        """Processa cada ficheiro individualmente, guarda batches temporários, e só junta tudo no final."""
+        logger.info("Starting CIC-DDoS2019 dataset processing (file-by-file, temp storage)")
 
         # Find all CSV files
         csv_files = self.find_csv_files()
@@ -220,46 +220,66 @@ class CICDDoSProcessor:
         # Analyze data structure
         label_col, numeric_features = self.analyze_data_structure(csv_files)
 
-        # Process all files
-        all_X_batches = []
-        all_y_batches = []
+        temp_dir = self.output_dir / "tmp_cic_ddos"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_X_files = []
+        temp_y_files = []
         total_samples = 0
 
         for file_idx, csv_file in enumerate(csv_files):
             logger.info(f"Processing file {file_idx + 1}/{len(csv_files)}: {csv_file.name}")
-
+            file_X_batches = []
+            file_y_batches = []
             try:
-                # Process file in chunks for memory efficiency
                 chunk_reader = pd.read_csv(csv_file, chunksize=self.batch_size, low_memory=False)
-
                 for chunk_idx, chunk in enumerate(chunk_reader):
                     X_chunk, y_chunk = self.process_chunk(chunk, label_col, numeric_features)
-
                     if X_chunk is not None:
-                        all_X_batches.append(X_chunk)
-                        all_y_batches.append(y_chunk)
-                        total_samples += len(chunk)
-
+                        file_X_batches.append(X_chunk)
+                        file_y_batches.append(y_chunk)
+                        total_samples += len(X_chunk)
                     if (chunk_idx + 1) % 10 == 0:
-                        logger.info(f"  Processed {(chunk_idx + 1) * self.batch_size:,} rows")
-
+                        logger.info(f"  Processed {(chunk_idx + 1) * self.batch_size:,} rows in {csv_file.name}")
+                # Guardar batches deste ficheiro em ficheiros temporários
+                if file_X_batches:
+                    X_file = temp_dir / f"X_{file_idx}.npy"
+                    y_file = temp_dir / f"y_{file_idx}.npy"
+                    np.save(X_file, np.vstack(file_X_batches))
+                    np.save(y_file, np.concatenate(file_y_batches))
+                    temp_X_files.append(X_file)
+                    temp_y_files.append(y_file)
+                del file_X_batches, file_y_batches
+                gc.collect()
             except Exception as e:
                 logger.warning(f"Error processing {csv_file.name}: {str(e)}")
                 continue
 
-        if not all_X_batches:
+        if not temp_X_files:
             raise ValueError("No valid data was processed from any file")
 
-        # Combine all processed batches
-        logger.info("Combining all processed data")
-        X_final = np.vstack(all_X_batches)
-        y_final = np.concatenate(all_y_batches)
+        # Juntar todos os ficheiros temporários
+        logger.info("Combining all processed data from temp files")
+        X_list = [np.load(f) for f in temp_X_files]
+        y_list = [np.load(f) for f in temp_y_files]
+        X_final = np.vstack(X_list)
+        y_final = np.concatenate(y_list)
 
         # Remover features com variância zero apenas no final
         feature_variance = np.var(X_final, axis=0)
         valid_features_idx = np.where(feature_variance > 0)[0]
         X_final = X_final[:, valid_features_idx]
         final_features = [numeric_features[i] for i in valid_features_idx]
+
+        # Limpar temporários
+        for f in temp_X_files + temp_y_files:
+            try:
+                f.unlink()
+            except Exception:
+                pass
+        try:
+            temp_dir.rmdir()
+        except Exception:
+            pass
 
         # Calculate statistics
         benign_count = (y_final == 0).sum()
@@ -272,10 +292,7 @@ class CICDDoSProcessor:
         logger.info(f"  BENIGN samples: {benign_count:,} ({(1-attack_ratio)*100:.1f}%)")
         logger.info(f"  Attack samples: {attack_count:,} ({attack_ratio*100:.1f}%)")
 
-        # Memory cleanup
-        del all_X_batches, all_y_batches
         gc.collect()
-
         return X_final, y_final, final_features
     
     def save_processed_data(self, X, y, feature_names):
