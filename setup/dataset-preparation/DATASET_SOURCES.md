@@ -6,8 +6,9 @@ Este documento identifica os datasets utilizados, como descarregar manualmente, 
 
 ## CIC-DDoS2019
 - **Fonte**: Canadian Institute for Cybersecurity (CIC), University of New Brunswick
-- **Download**: [Site oficial](https://www.unb.ca/cic/datasets/ddos-2019.html) | [Kaggle](https://www.kaggle.com/datasets/aymenabb/ddos-evaluation-dataset-cic-ddos2019)
-- **Como obter**: Registar, descarregar ZIP, extrair para `setup/dataset-preparation/CIC-DDoS2019/`
+- **Dataset**: [Site oficial](https://www.unb.ca/cic/datasets/ddos-2019.html)
+- **Download**: [Kaggle - cicddos2019.parquet (limpo e tratado)](https://www.kaggle.com/datasets/dhoogla/cicddos2019/data)
+- **Como obter**: Descarregar e extrair o 'cicddos2019.parquet' para `setup/dataset-preparation/CIC-DDoS2019/`
 - **Estrutura**:
   ```
   setup/dataset-preparation/
@@ -33,7 +34,7 @@ Este documento identifica os datasets utilizados, como descarregar manualmente, 
 - **Fonte**: [Kaggle - CIC-BoT-IoT](https://www.kaggle.com/datasets/dhoogla/cicbotiot)
 - **Autores**: Dr. Mohanad Sarhan, Dr. Siamak Layeghy & Dr. Marius Portmann
 - **Preprint**: [arXiv:2104.07183](https://arxiv.org/abs/2104.07183)
-- **Como obter**: Descarregar ZIP, extrair para `setup/dataset-preparation/CIC-BoT-IoT/`
+- **Como obter**: Descarregar e extrair para `setup/dataset-preparation/CIC-BoT-IoT/`
 - **Estrutura**:
   ```
   setup/dataset-preparation/
@@ -57,7 +58,7 @@ Este documento identifica os datasets utilizados, como descarregar manualmente, 
 ## NF-UNSW-NB15-v3 (NetFlow)
 - **Fonte**: [UQ eSpace](https://espace.library.uq.edu.au/view/UQ:6e0eda1) | [Kaggle](https://www.kaggle.com/datasets/ndayisabae/nf-unsw-nb15-v3)
 - **Autores**: Luay, Majed; Layeghy, Siamak; Sarhan, Mohanad; Hoseininoorbin, Sayedehfaezeh; Moustafa, Nour; Portmann, Marius
-- **Como obter**: Descarregar ZIP, extrair para `setup/dataset-preparation/NF-UNSW-NB15-v3/`
+- **Como obter**: Descarregar e extrair para `setup/dataset-preparation/NF-UNSW-NB15-v3/`
 - **Estrutura**:
   ```
   setup/dataset-preparation/
