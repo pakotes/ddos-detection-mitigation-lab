@@ -40,12 +40,19 @@ class BoTIoTProcessor:
         if not csv_files:
             logger.error("Nenhum ficheiro CSV encontrado em %s", self.input_dir)
             return False
-        # Carregar e concatenar todos os ficheiros
+        # Carregar e concatenar todos os ficheiros, excluindo dataframes vazios ou só com NA
         dfs = []
         for csv_file in csv_files:
             logger.info(f"A carregar {csv_file.name}")
             df = pd.read_csv(csv_file, low_memory=False)
-            dfs.append(df)
+            # Excluir dataframes vazios ou só com NA
+            if not df.empty and not df.isna().all().all():
+                dfs.append(df)
+            else:
+                logger.warning(f"Ficheiro ignorado (vazio ou só com NA): {csv_file.name}")
+        if not dfs:
+            logger.error("Todos os ficheiros CSV estão vazios ou só com NA.")
+            return False
         data = pd.concat(dfs, ignore_index=True)
 
         # Identificar colunas categóricas

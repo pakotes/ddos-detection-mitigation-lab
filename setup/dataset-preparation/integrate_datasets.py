@@ -293,8 +293,19 @@ class DatasetIntegrator:
             'configurations': configurations
         }
         
+        def convert_paths(obj):
+            if isinstance(obj, dict):
+                return {k: convert_paths(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_paths(v) for v in obj]
+            elif isinstance(obj, Path):
+                return str(obj)
+            else:
+                return obj
+
+        integration_summary_serializable = convert_paths(integration_summary)
         with open(self.output_dir / "integration_summary.json", 'w') as f:
-            json.dump(integration_summary, f, indent=2)
+            json.dump(integration_summary_serializable, f, indent=2)
         
         logger.info("Dataset integration completed successfully")
         logger.info(f"Created {len(configurations)} configurations")

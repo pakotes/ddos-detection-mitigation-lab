@@ -209,7 +209,7 @@ class CICDDoSProcessor:
         return X_chunk.values, y_binary.values
     
     def load_and_preprocess(self):
-        """Processa cada ficheiro individualmente, guarda batches temporários e só junta tudo no final."""
+        """Processa cada ficheiro individualmente, guarda batches temporários e junta tudo de forma eficiente usando numpy.memmap."""
         logger.info("Início do processamento do dataset CIC-DDoS2019 (ficheiro a ficheiro, armazenamento temporário)")
 
         # Encontrar todos os ficheiros CSV
@@ -223,6 +223,8 @@ class CICDDoSProcessor:
         temp_X_files = []
         temp_y_files = []
         total_samples = 0
+        total_features = None
+        samples_per_file = []
 
         for file_idx, csv_file in enumerate(csv_files):
             logger.info(f"A processar ficheiro {file_idx + 1}/{len(csv_files)}: {csv_file.name}")
@@ -242,11 +244,16 @@ class CICDDoSProcessor:
                 if file_X_batches:
                     X_file = temp_dir / f"X_{file_idx}.npy"
                     y_file = temp_dir / f"y_{file_idx}.npy"
-                    np.save(X_file, np.vstack(file_X_batches))
-                    np.save(y_file, np.concatenate(file_y_batches))
+                    X_stacked = np.vstack(file_X_batches)
+                    y_concat = np.concatenate(file_y_batches)
+                    np.save(X_file, X_stacked)
+                    np.save(y_file, y_concat)
                     temp_X_files.append(X_file)
                     temp_y_files.append(y_file)
-                del file_X_batches, file_y_batches
+                    samples_per_file.append(X_stacked.shape[0])
+                    if total_features is None:
+                        total_features = X_stacked.shape[1]
+                del file_X_batches, file_y_batches, X_stacked, y_concat
                 gc.collect()
             except Exception as e:
                 logger.warning(f"Erro ao processar {csv_file.name}: {str(e)}")
@@ -255,18 +262,33 @@ class CICDDoSProcessor:
         if not temp_X_files:
             raise ValueError("Nenhum dado válido foi processado de nenhum ficheiro")
 
-        # Juntar todos os ficheiros temporários
-        logger.info("A combinar todos os dados processados dos ficheiros temporários")
-        X_list = [np.load(f) for f in temp_X_files]
-        y_list = [np.load(f) for f in temp_y_files]
-        X_final = np.vstack(X_list)
-        y_final = np.concatenate(y_list)
+        # Juntar todos os ficheiros temporários de forma eficiente usando numpy.memmap
+        logger.info("A combinar todos os dados processados dos ficheiros temporários com numpy.memmap")
+        total_rows = sum(samples_per_file)
+        X_memmap_path = self.output_dir / "X_cic_ddos_memmap.dat"
+        y_memmap_path = self.output_dir / "y_cic_ddos_memmap.dat"
+        X_final = np.memmap(X_memmap_path, dtype='float32', mode='w+', shape=(total_rows, total_features))
+        y_final = np.memmap(y_memmap_path, dtype='int8', mode='w+', shape=(total_rows,))
+
+        row_idx = 0
+        for X_file, y_file, n_rows in zip(temp_X_files, temp_y_files, samples_per_file):
+            X_part = np.load(X_file)
+            y_part = np.load(y_file)
+            X_final[row_idx:row_idx+n_rows, :] = X_part
+            y_final[row_idx:row_idx+n_rows] = y_part
+            row_idx += n_rows
+            del X_part, y_part
+            gc.collect()
 
         # Remover features com variância zero apenas no final
         feature_variance = np.var(X_final, axis=0)
         valid_features_idx = np.where(feature_variance > 0)[0]
-        X_final = X_final[:, valid_features_idx]
+        X_final_valid = X_final[:, valid_features_idx]
         final_features = [numeric_features[i] for i in valid_features_idx]
+
+        # Converter para arrays normais para guardar
+        X_final_valid = np.array(X_final_valid)
+        y_final = np.array(y_final)
 
         # Limpar temporários
         for f in temp_X_files + temp_y_files:
@@ -278,6 +300,16 @@ class CICDDoSProcessor:
             temp_dir.rmdir()
         except Exception:
             pass
+        try:
+            X_final._mmap.close()
+            y_final._mmap.close()
+        except Exception:
+            pass
+        try:
+            X_memmap_path.unlink()
+            y_memmap_path.unlink()
+        except Exception:
+            pass
 
         # Estatísticas
         benign_count = (y_final == 0).sum()
@@ -286,12 +318,12 @@ class CICDDoSProcessor:
 
         logger.info(f"Processamento do dataset concluído:")
         logger.info(f"  Total de amostras: {len(y_final):,}")
-        logger.info(f"  Features: {X_final.shape[1]}")
+        logger.info(f"  Features: {X_final_valid.shape[1]}")
         logger.info(f"  Amostras BENIGN: {benign_count:,} ({(1-attack_ratio)*100:.1f}%)")
         logger.info(f"  Amostras de ataque: {attack_count:,} ({attack_ratio*100:.1f}%)")
 
         gc.collect()
-        return X_final, y_final, final_features
+        return X_final_valid, y_final, final_features
     
     def save_processed_data(self, X, y, feature_names):
         """Guarda os dados processados em disco"""
