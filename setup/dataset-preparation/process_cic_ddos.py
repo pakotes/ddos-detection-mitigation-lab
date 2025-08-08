@@ -142,24 +142,24 @@ class CICDDoSProcessor:
 
     def export_all(self, X_train, X_val, X_test, y_train_multi, y_val_multi, y_test_multi, y_train_bin, y_val_bin, y_test_bin, scaler, features, metainfo):
         # Exportar arrays
-        np.save(self.output_dir / "X_train_cic_v2.npy", X_train)
-        np.save(self.output_dir / "X_val_cic_v2.npy", X_val)
-        np.save(self.output_dir / "X_test_cic_v2.npy", X_test)
-        np.save(self.output_dir / "y_train_multi_cic_v2.npy", y_train_multi)
-        np.save(self.output_dir / "y_val_multi_cic_v2.npy", y_val_multi)
-        np.save(self.output_dir / "y_test_multi_cic_v2.npy", y_test_multi)
-        np.save(self.output_dir / "y_train_bin_cic_v2.npy", y_train_bin)
-        np.save(self.output_dir / "y_val_bin_cic_v2.npy", y_val_bin)
-        np.save(self.output_dir / "y_test_bin_cic_v2.npy", y_test_bin)
+        np.save(self.output_dir / "X_train_cic_ddos.npy", X_train)
+        np.save(self.output_dir / "X_val_cic_ddos.npy", X_val)
+        np.save(self.output_dir / "X_test_cic_ddos.npy", X_test)
+        np.save(self.output_dir / "y_train_multi_cic_ddos.npy", y_train_multi)
+        np.save(self.output_dir / "y_val_multi_cic_ddos.npy", y_val_multi)
+        np.save(self.output_dir / "y_test_multi_cic_ddos.npy", y_test_multi)
+        np.save(self.output_dir / "y_train_bin_cic_ddos.npy", y_train_bin)
+        np.save(self.output_dir / "y_val_bin_cic_ddos.npy", y_val_bin)
+        np.save(self.output_dir / "y_test_bin_cic_ddos.npy", y_test_bin)
         # Exportar scaler
         import pickle
-        with open(self.output_dir / "scaler_cic_v2.pkl", "wb") as f:
+        with open(self.output_dir / "scaler_cic_ddos.pkl", "wb") as f:
             pickle.dump(scaler, f)
         # Exportar features
-        with open(self.output_dir / "feature_names_cic_v2.txt", "w") as f:
+        with open(self.output_dir / "feature_names_cic_ddos.txt", "w") as f:
             f.write('\n'.join(features))
         # Exportar metadados
-        with open(self.output_dir / "metadata_cic_v2.json", "w") as f:
+        with open(self.output_dir / "metadata_cic_ddos.json", "w") as f:
             json.dump(metainfo, f, indent=2)
         logger.info("Dados e metadados exportados.")
 
