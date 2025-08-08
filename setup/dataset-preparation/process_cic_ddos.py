@@ -2,21 +2,6 @@
 """
 Processador CIC-DDoS2019
 
-Pipeline robusto para preparação do dataset CIC-DDoS2019 segundo as 6 diretivas principais:
-1. Remoção de features irrelevantes/socket
-2. Remoção/substituição de valores em falta/infinitos
-3. Remoção de duplicados
-4. Seleção aleatória de subconjuntos equilibrados por classe
-5. Divisão treino/teste/validação
-6. Escalonamento MinMax
-
-Extras incluídos:
-- Logging detalhado
-- Exportação de metadados completos
-- Relatórios de distribuição de classes
-- Exportação de amostras por classe
-- Exportação de features removidas
-- Exportação de índices de amostras selecionadas
 """
 
 import pandas as pd
@@ -151,6 +136,11 @@ class CICDDoSProcessor:
         np.save(self.output_dir / "y_train_bin_cic_ddos.npy", y_train_bin)
         np.save(self.output_dir / "y_val_bin_cic_ddos.npy", y_val_bin)
         np.save(self.output_dir / "y_test_bin_cic_ddos.npy", y_test_bin)
+        # Exportação agregada para pipeline
+        X_cic_ddos = np.concatenate([X_train, X_val, X_test], axis=0)
+        y_cic_ddos = np.concatenate([y_train_bin, y_val_bin, y_test_bin], axis=0)
+        np.save(self.output_dir / "X_cic_ddos.npy", X_cic_ddos)
+        np.save(self.output_dir / "y_cic_ddos.npy", y_cic_ddos)
         # Exportar scaler
         import pickle
         with open(self.output_dir / "scaler_cic_ddos.pkl", "wb") as f:

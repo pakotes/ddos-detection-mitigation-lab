@@ -188,7 +188,12 @@ class NFUNSWProcessor:
             'amostras_ataque': int(y.sum()),
             'amostras_normais': int(len(y) - y.sum()),
             'percentagem_ataque': float(y.sum() / len(y)),
-            'nomes_features': feature_names
+            'nomes_features': feature_names,
+            'scaler_file': 'scaler_nf_unsw.pkl',
+            'feature_names_file': 'feature_names_nf_unsw.txt',
+            'array_file': 'X_nf_unsw.npy',
+            'label_file': 'y_nf_unsw.npy',
+            'array_scaled_file': 'X_nf_unsw_scaled.npy'
         }
 
         with open(self.output_dir / "metadata_nf_unsw.json", 'w') as f:
