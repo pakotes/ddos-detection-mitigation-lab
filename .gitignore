@@ -71,12 +71,11 @@ setup/config/credentials.yml
 *.tar.gz
 *.tgz
 *.rar
-datasets/**
 src/datasets/**
 src/models/**
 setup/dataset-preparation/CIC-DDoS2019/**
 setup/dataset-preparation/NF-UNSW-NB15-v3/**
-setup/dataset-preparation/BoT-IoT/**
+setup/dataset-preparation/CIC-BoT-IoT/**
 
 # === Manter apenas README.md nas pastas específicas ===
 !datasets/README.md
