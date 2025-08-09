@@ -12,6 +12,21 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Função leve para otimizar tipos de dados de DataFrames
+def df_shrink(df, obj2cat=False, int2uint=False):
+    for col in df.select_dtypes(include=['float']).columns:
+        df[col] = pd.to_numeric(df[col], downcast='float')
+    for col in df.select_dtypes(include=['integer']).columns:
+        df[col] = pd.to_numeric(df[col], downcast='integer')
+    if obj2cat:
+        for col in df.select_dtypes(include=['object']).columns:
+            df[col] = df[col].astype('category')
+    if int2uint:
+        for col in df.select_dtypes(include=['int']).columns:
+            if (df[col] >= 0).all():
+                df[col] = pd.to_numeric(df[col], downcast='unsigned')
+    return df
+
 class NFBoTIoTProcessor:
     def __init__(self, input_dir=None, output_dir=None, chunksize=500000):
         if input_dir is None:
@@ -51,6 +66,28 @@ class NFBoTIoTProcessor:
                         break
             except Exception as e:
                 logger.warning(f"Erro ao carregar CSV de features: {e}")
+        # Carregar todo o CSV para limpeza e amostragem estratificada
+        df = pd.read_csv(csv_file)
+        # Identificar colunas categóricas
+        categorical_cols = [
+            'proto', 'flgs', 'state', 'smac', 'dmac', 'saddr', 'daddr', 'category', 'subcategory', 'stime', 'ltime'
+        ]
+        # Limpeza centralizada
+        drop_cols = [col for col in df.columns if col.lower() in ['id', 'index', 'unnamed: 0']]
+        if drop_cols:
+            df = df.drop(columns=drop_cols)
+        df = df_shrink(df)
+        df = df.replace([np.inf, -np.inf], np.nan)
+        df = df.dropna()
+        df = df.drop_duplicates()
+        df = df.reset_index(drop=True)
+        # Amostragem estratificada
+        n_amostra = 2_500_000
+        if 'Label' in df.columns:
+            # Proporção entre classes
+            df_sample = df.groupby('Label', group_keys=False).apply(lambda x: x.sample(frac=min(1, n_amostra/len(df)), random_state=42))
+            logger.info(f"Amostragem estratificada: {len(df_sample)} registos selecionados")
+            df = df_sample.reset_index(drop=True)
         # Processar batches
         batch_idx = 1
         batch_files_X = []
@@ -58,24 +95,20 @@ class NFBoTIoTProcessor:
         n_samples = 0
         attack_count = 0
         attack_names = set()
-        for chunk in pd.read_csv(csv_file, chunksize=self.chunksize):
-            # Identificar colunas categóricas
-            categorical_cols = [
-                'proto', 'flgs', 'state', 'smac', 'dmac', 'saddr', 'daddr', 'category', 'subcategory', 'stime', 'ltime'
-            ]
-            # Selecionar apenas colunas numéricas
-            feature_cols = [col for col in chunk.columns if col not in categorical_cols + ['Label', 'Attack']]
-            numeric_cols = chunk[feature_cols].select_dtypes(include=["number"]).columns.tolist()
+        # Selecionar apenas colunas numéricas
+        feature_cols = [col for col in df.columns if col not in categorical_cols + ['Label', 'Attack']]
+        numeric_cols = df[feature_cols].select_dtypes(include=["number"]).columns.tolist()
+        # Processar em batches
+        for start in range(0, len(df), self.chunksize):
+            end = min(start + self.chunksize, len(df))
+            chunk = df.iloc[start:end]
             X_batch = chunk[numeric_cols].values.astype(np.float32)
-            # Usar Label como alvo (0=Benign, 1=Attack)
             y_batch = chunk['Label'].values.astype(np.float32) if 'Label' in chunk.columns else np.zeros(len(chunk), dtype=np.float32)
-            # Recolher nomes dos ataques (excluindo 'Benign')
             if 'Attack' in chunk.columns:
                 attack_names.update([a for a in chunk['Attack'].unique() if a != 'Benign'])
             n_samples += X_batch.shape[0]
             attack_count += int(np.sum(y_batch))
             logger.info(f"Batch {batch_idx} processado: {X_batch.shape[0]} amostras")
-            # Exportar batch
             batch_X_file = self.output_dir / f"X_nf_bot_iot_batch_{batch_idx}.npy"
             batch_y_file = self.output_dir / f"y_nf_bot_iot_batch_{batch_idx}.npy"
             np.save(batch_X_file, X_batch)
@@ -157,6 +190,7 @@ class NFBoTIoTProcessor:
         logger.info(f"Processamento de NF-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
         print(f"Processamento de NF-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
         return True
+    # (Removido: bloco de amostragem estratificada fora do método)
 
 if __name__ == "__main__":
     print("[DEBUG] Início do processamento NF-BoT-IoT")
