@@ -11,6 +11,7 @@ import numpy as np
 import json
 from pathlib import Path
 import logging
+import dask.dataframe as dd
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -42,14 +43,14 @@ class BoTIoTProcessor:
 
     def process(self):
         """Processa o conjunto de dados BoT-IoT (Parquet principal) e exporta resultados."""
-        logger.info("A processar CIC-BoT-IoT...")
+        logger.info("A processar CIC-BoT-IoT em batches com Dask...")
         parquet_file, features_csv = self.find_data_files()
         if not parquet_file:
             logger.error(f"Nenhum ficheiro Parquet encontrado em {self.input_dir}")
             print(f"ERRO: Nenhum ficheiro Parquet encontrado em {self.input_dir}")
             return False
-        logger.info(f"A carregar {parquet_file.name}")
-        data = pd.read_parquet(parquet_file)
+        logger.info(f"A carregar {parquet_file.name} com Dask")
+        ddf = dd.read_parquet(parquet_file)
         # Carregar nomes das features do CSV se existir
         feature_names = None
         if features_csv:
@@ -67,9 +68,26 @@ class BoTIoTProcessor:
             'proto', 'flgs', 'state', 'smac', 'dmac', 'saddr', 'daddr', 'category', 'subcategory', 'stime', 'ltime'
         ]
         # Excluir colunas categóricas e o target do X
-        feature_cols = [col for col in data.columns if col not in categorical_cols + ['attack']]
-        X = data[feature_cols].values
-        y = data['attack'].values if 'attack' in data.columns else np.zeros(len(data))
+        feature_cols = [col for col in ddf.columns if col not in categorical_cols + ['attack']]
+        # Inicializar arrays para batches
+        X_batches = []
+        y_batches = []
+        n_samples = 0
+        attack_count = 0
+        # Processar cada batch
+        for part in ddf.to_delayed():
+            df = part.compute()
+            X_batch = df[feature_cols].values
+            y_batch = df['attack'].values if 'attack' in df.columns else np.zeros(len(df))
+            X_batches.append(X_batch)
+            y_batches.append(y_batch)
+            n_samples += X_batch.shape[0]
+            attack_count += int(np.sum(y_batch))
+            logger.info(f"Batch processado: {X_batch.shape[0]} amostras")
+        # Concatenar todos os batches
+        import numpy as np
+        X = np.concatenate(X_batches, axis=0)
+        y = np.concatenate(y_batches, axis=0)
         # Exportação compatível com pipeline
         np.save(self.output_dir / "X_cic_bot_iot.npy", X)
         np.save(self.output_dir / "y_cic_bot_iot.npy", y)
@@ -80,18 +98,15 @@ class BoTIoTProcessor:
         else:
             with open(self.output_dir / "feature_names_cic_bot_iot.txt", "w") as f:
                 f.write('\n'.join(feature_cols))
-        # Estatísticas básicas
-        n_samples = X.shape[0]
         n_features = X.shape[1]
-        attack_count = int(np.sum(y))
         normal_count = int(n_samples - attack_count)
         attack_ratio = float(attack_count / n_samples) if n_samples > 0 else 0.0
         # Metadados completos
         metadata = {
             "dataset": "CIC-BoT-IoT",
-            "colunas": list(data.columns),
+            "colunas": list(ddf.columns),
             "colunas_features": feature_cols,
-            "colunas_categoricas": [col for col in categorical_cols if col in data.columns],
+            "colunas_categoricas": [col for col in categorical_cols if col in ddf.columns],
             "alvo": "attack",
             "dimensao": X.shape,
             "feature_names_file": "feature_names_cic_bot_iot.txt",
