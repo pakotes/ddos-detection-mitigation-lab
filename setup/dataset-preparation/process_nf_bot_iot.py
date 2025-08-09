@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class NFBoTIoTProcessor:
-    def __init__(self, input_dir=None, output_dir=None, chunksize=50000):
+    def __init__(self, input_dir=None, output_dir=None, chunksize=100000):
         if input_dir is None:
             self.input_dir = Path(__file__).parent / "NF-BoT-IoT-v3"
         else:
@@ -57,14 +57,19 @@ class NFBoTIoTProcessor:
         batch_files_y = []
         n_samples = 0
         attack_count = 0
+        attack_names = set()
         for chunk in pd.read_csv(csv_file, chunksize=self.chunksize):
             # Identificar colunas categóricas
             categorical_cols = [
                 'proto', 'flgs', 'state', 'smac', 'dmac', 'saddr', 'daddr', 'category', 'subcategory', 'stime', 'ltime'
             ]
-            feature_cols = [col for col in chunk.columns if col not in categorical_cols + ['attack']]
+            feature_cols = [col for col in chunk.columns if col not in categorical_cols + ['Label', 'Attack']]
             X_batch = chunk[feature_cols].values
-            y_batch = chunk['attack'].values if 'attack' in chunk.columns else np.zeros(len(chunk))
+            # Usar Label como alvo (0=Benign, 1=Attack)
+            y_batch = chunk['Label'].values if 'Label' in chunk.columns else np.zeros(len(chunk))
+            # Recolher nomes dos ataques (excluindo 'Benign')
+            if 'Attack' in chunk.columns:
+                attack_names.update([a for a in chunk['Attack'].unique() if a != 'Benign'])
             n_samples += X_batch.shape[0]
             attack_count += int(np.sum(y_batch))
             logger.info(f"Batch {batch_idx} processado: {X_batch.shape[0]} amostras")
@@ -76,6 +81,9 @@ class NFBoTIoTProcessor:
             batch_files_X.append(str(batch_X_file))
             batch_files_y.append(str(batch_y_file))
             batch_idx += 1
+        # Exportar nomes dos ataques
+        with open(self.output_dir / "attack_names_nf_bot_iot.txt", "w") as f:
+            f.write('\n'.join(sorted(attack_names)))
         # Exportar lista de ficheiros de batches
         with open(self.output_dir / "X_nf_bot_iot_batches.txt", "w") as f:
             f.write('\n'.join(batch_files_X))
@@ -97,8 +105,9 @@ class NFBoTIoTProcessor:
             "colunas": list(chunk.columns),
             "colunas_features": feature_cols,
             "colunas_categoricas": [col for col in categorical_cols if col in chunk.columns],
-            "alvo": "attack",
+            "alvo": "Label",
             "feature_names_file": "feature_names_nf_bot_iot.txt",
+            "attack_names_file": "attack_names_nf_bot_iot.txt",
             "batch_files_X": batch_files_X,
             "batch_files_y": batch_files_y,
             "amostras": n_samples,
