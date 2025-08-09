@@ -89,6 +89,40 @@ class NFBoTIoTProcessor:
             f.write('\n'.join(batch_files_X))
         with open(self.output_dir / "y_nf_bot_iot_batches.txt", "w") as f:
             f.write('\n'.join(batch_files_y))
+
+        # União sequencial dos batches para evitar consumo excessivo de memória
+        logger.info("A unir todos os batches em arrays únicos de forma sequencial...")
+        import os
+        import numpy.lib.format
+        # Determinar shapes
+        total_samples = 0
+        X_shape = None
+        for x_file in batch_files_X:
+            arr = np.load(x_file)
+            if X_shape is None:
+                X_shape = arr.shape[1]
+            total_samples += arr.shape[0]
+        # Criar ficheiros .npy em modo append
+        X_out_path = self.output_dir / "X_nf_bot_iot.npy"
+        y_out_path = self.output_dir / "y_nf_bot_iot.npy"
+        # Criar ficheiro X
+        X_out = np.lib.format.open_memmap(X_out_path, mode='w+', dtype='float32', shape=(total_samples, X_shape))
+        y_out = np.lib.format.open_memmap(y_out_path, mode='w+', dtype='float32', shape=(total_samples,))
+        idx = 0
+        for x_file, y_file in zip(batch_files_X, batch_files_y):
+            X_batch = np.load(x_file)
+            y_batch = np.load(y_file)
+            X_out[idx:idx+X_batch.shape[0], :] = X_batch
+            y_out[idx:idx+X_batch.shape[0]] = y_batch
+            idx += X_batch.shape[0]
+        logger.info(f"Arrays únicos exportados: X_nf_bot_iot.npy ({X_out.shape}), y_nf_bot_iot.npy ({y_out.shape})")
+        # Eliminar ficheiros batch após sucesso
+        for f in batch_files_X + batch_files_y:
+            try:
+                os.remove(f)
+            except Exception as e:
+                logger.warning(f"Não foi possível eliminar {f}: {e}")
+        logger.info("Ficheiros batch eliminados após união.")
         # Exportar nomes das features
         if feature_names:
             with open(self.output_dir / "feature_names_nf_bot_iot.txt", "w") as f:
