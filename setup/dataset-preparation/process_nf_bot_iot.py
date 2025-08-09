@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Processador NF-BoT-IoT-v3
+Processador NF-BoT-IoT
 Processa o CSV em batches, exporta arrays .npy e metadados, usando ficheiro de features.
 """
 import pandas as pd
@@ -32,7 +32,7 @@ class NFBoTIoTProcessor:
         return csv_file, features_csv
 
     def process(self):
-        logger.info("A processar NF-BoT-IoT-v3 em batches...")
+        logger.info("A processar NF-BoT-IoT em batches...")
         csv_file, features_csv = self.find_data_files()
         if not csv_file:
             logger.error(f"Nenhum ficheiro CSV encontrado em {self.input_dir}")
@@ -69,36 +69,36 @@ class NFBoTIoTProcessor:
             attack_count += int(np.sum(y_batch))
             logger.info(f"Batch {batch_idx} processado: {X_batch.shape[0]} amostras")
             # Exportar batch
-            batch_X_file = self.output_dir / f"X_nf_bot_iot_v3_batch_{batch_idx}.npy"
-            batch_y_file = self.output_dir / f"y_nf_bot_iot_v3_batch_{batch_idx}.npy"
+            batch_X_file = self.output_dir / f"X_nf_bot_iot_batch_{batch_idx}.npy"
+            batch_y_file = self.output_dir / f"y_nf_bot_iot_batch_{batch_idx}.npy"
             np.save(batch_X_file, X_batch)
             np.save(batch_y_file, y_batch)
             batch_files_X.append(str(batch_X_file))
             batch_files_y.append(str(batch_y_file))
             batch_idx += 1
         # Exportar lista de ficheiros de batches
-        with open(self.output_dir / "X_nf_bot_iot_v3_batches.txt", "w") as f:
+        with open(self.output_dir / "X_nf_bot_iot_batches.txt", "w") as f:
             f.write('\n'.join(batch_files_X))
-        with open(self.output_dir / "y_nf_bot_iot_v3_batches.txt", "w") as f:
+        with open(self.output_dir / "y_nf_bot_iot_batches.txt", "w") as f:
             f.write('\n'.join(batch_files_y))
         # Exportar nomes das features
         if feature_names:
-            with open(self.output_dir / "feature_names_nf_bot_iot_v3.txt", "w") as f:
+            with open(self.output_dir / "feature_names_nf_bot_iot.txt", "w") as f:
                 f.write('\n'.join(feature_names))
         else:
-            with open(self.output_dir / "feature_names_nf_bot_iot_v3.txt", "w") as f:
+            with open(self.output_dir / "feature_names_nf_bot_iot.txt", "w") as f:
                 f.write('\n'.join(feature_cols))
         n_features = len(feature_cols)
         normal_count = int(n_samples - attack_count)
         attack_ratio = float(attack_count / n_samples) if n_samples > 0 else 0.0
         # Metadados completos
         metadata = {
-            "dataset": "nf_bot_iot_v3",
+            "dataset": "nf_bot_iot",
             "colunas": list(chunk.columns),
             "colunas_features": feature_cols,
             "colunas_categoricas": [col for col in categorical_cols if col in chunk.columns],
             "alvo": "attack",
-            "feature_names_file": "feature_names_nf_bot_iot_v3.txt",
+            "feature_names_file": "feature_names_nf_bot_iot.txt",
             "batch_files_X": batch_files_X,
             "batch_files_y": batch_files_y,
             "amostras": n_samples,
@@ -107,14 +107,14 @@ class NFBoTIoTProcessor:
             "amostras_normais": normal_count,
             "percentagem_ataque": attack_ratio
         }
-        with open(self.output_dir / "metadata_nf_bot_iot_v3.json", "w") as f:
+        with open(self.output_dir / "metadata_nf_bot_iot.json", "w") as f:
             json.dump(metadata, f, indent=2)
-        logger.info(f"Processamento de NF-BoT-IoT-v3 concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
-        print(f"Processamento de NF-BoT-IoT-v3 concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
+        logger.info(f"Processamento de NF-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
+        print(f"Processamento de NF-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
         return True
 
 if __name__ == "__main__":
-    print("[DEBUG] Início do processamento NF-BoT-IoT-v3")
+    print("[DEBUG] Início do processamento NF-BoT-IoT")
     processor = NFBoTIoTProcessor()
     print(f"[DEBUG] Diretório de entrada: {processor.input_dir}")
     print(f"[DEBUG] Diretório de saída: {processor.output_dir}")
