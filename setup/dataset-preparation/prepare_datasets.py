@@ -43,7 +43,7 @@ class DatasetPreparationPipeline:
         self.processors = {
             'nf_unsw': self.script_dir / "process_nf_unsw.py",
             'cic_ddos': self.script_dir / "process_cic_ddos.py",
-            'cic_bot_iot': self.script_dir / "process_cic_bot_iot.py",
+            'nf_bot_iot_v3': self.script_dir / "process_nf_bot_iot_v3.py",
             'integration': self.script_dir / "integrate_datasets.py"
         }
     
@@ -72,25 +72,23 @@ class DatasetPreparationPipeline:
                     'files': len(csv_files),
                     'description': 'Conjunto de dados CIC-DDoS2019 para detecção especializada de DDoS'
                 }
-        # CIC-BoT-IoT
-        cic_bot_iot_dir = self.script_dir / "CIC-BoT-IoT"
-        parquet_files = list(cic_bot_iot_dir.glob("*.parquet")) if cic_bot_iot_dir.exists() else []
-        csv_files = list(cic_bot_iot_dir.glob("*.csv")) if cic_bot_iot_dir.exists() else []
-        if cic_bot_iot_dir.exists() and (parquet_files or csv_files):
-            available_datasets['cic_bot_iot'] = {
-                'path': cic_bot_iot_dir,
-                'files': len(parquet_files) + len(csv_files),
-                'parquet_files': len(parquet_files),
+        # NF-BoT-IoT-v3
+        nf_bot_iot_v3_dir = self.script_dir / "NF-BoT-IoT-v3"
+        csv_files = list(nf_bot_iot_v3_dir.glob("*.csv")) if nf_bot_iot_v3_dir.exists() else []
+        if nf_bot_iot_v3_dir.exists() and csv_files:
+            available_datasets['nf_bot_iot_v3'] = {
+                'path': nf_bot_iot_v3_dir,
+                'files': len(csv_files),
                 'csv_files': len(csv_files),
-                'description': 'Conjunto de dados CIC-BoT-IoT para detecção de ataques IoT e DDoS'
+                'description': 'Conjunto de dados NF-BoT-IoT-v3 para detecção de ataques IoT e DDoS'
             }
             # Verificação do ficheiro de features
-            features_file = cic_bot_iot_dir / "CICFlowMeter Features.csv"
+            features_file = nf_bot_iot_v3_dir / "NetFlow_v3_Features.csv"
             if not features_file.exists():
-                available_datasets['cic_bot_iot']['features_csv_missing'] = True
-                available_datasets['cic_bot_iot']['features_csv_warning'] = "AVISO: Ficheiro 'CICFlowMeter Features.csv' em falta no diretório CIC-BoT-IoT. Algumas funcionalidades podem não ser extraídas corretamente."
+                available_datasets['nf_bot_iot_v3']['features_csv_missing'] = True
+                available_datasets['nf_bot_iot_v3']['features_csv_warning'] = "AVISO: Ficheiro 'NetFlow_v3_Features.csv' em falta no diretório NF-BoT-IoT-v3. Algumas funcionalidades podem não ser extraídas corretamente."
             else:
-                available_datasets['cic_bot_iot']['features_csv_missing'] = False
+                available_datasets['nf_bot_iot_v3']['features_csv_missing'] = False
         return available_datasets
     
     def run_processor(self, processor_name, script_path):

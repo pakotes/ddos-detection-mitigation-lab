@@ -75,7 +75,7 @@ src/datasets/**
 src/models/**
 setup/dataset-preparation/CIC-DDoS2019/**
 setup/dataset-preparation/NF-UNSW-NB15-v3/**
-setup/dataset-preparation/CIC-BoT-IoT/**
+setup/dataset-preparation/NF-BoT-IoT-v3/**
 
 # === Manter apenas README.md nas pastas específicas ===
 !datasets/README.md
