@@ -142,10 +142,21 @@ class DatasetPreparationPipeline:
     
     def generate_processing_report(self, results, available_datasets):
         """Gerar um relatório abrangente do processamento"""
+        # Converter PosixPath para str em available_datasets
+        def convert_paths(obj):
+            if isinstance(obj, dict):
+                return {k: convert_paths(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_paths(v) for v in obj]
+            elif isinstance(obj, Path):
+                return str(obj)
+            else:
+                return obj
+        available_datasets_str = convert_paths(available_datasets)
         report = {
             'processing_date': str(Path().resolve()),
             'pipeline_version': '1.0',
-            'available_datasets': available_datasets,
+            'available_datasets': available_datasets_str,
             'processing_results': results,
             'output_directory': str(self.processed_dir),
             'integration_directory': str(self.integrated_dir)

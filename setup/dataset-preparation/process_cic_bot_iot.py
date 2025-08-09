@@ -103,7 +103,7 @@ class BoTIoTProcessor:
         attack_ratio = float(attack_count / n_samples) if n_samples > 0 else 0.0
         # Metadados completos
         metadata = {
-            "dataset": "CIC-BoT-IoT",
+            "dataset": "cic_bot_iot",
             "colunas": list(ddf.columns),
             "colunas_features": feature_cols,
             "colunas_categoricas": [col for col in categorical_cols if col in ddf.columns],
