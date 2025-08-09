@@ -74,12 +74,23 @@ class DatasetPreparationPipeline:
                 }
         # CIC-BoT-IoT
         cic_bot_iot_dir = self.script_dir / "CIC-BoT-IoT"
-        if cic_bot_iot_dir.exists() and list(cic_bot_iot_dir.glob("*.csv")):
+        parquet_files = list(cic_bot_iot_dir.glob("*.parquet")) if cic_bot_iot_dir.exists() else []
+        csv_files = list(cic_bot_iot_dir.glob("*.csv")) if cic_bot_iot_dir.exists() else []
+        if cic_bot_iot_dir.exists() and (parquet_files or csv_files):
             available_datasets['cic_bot_iot'] = {
                 'path': cic_bot_iot_dir,
-                'files': len(list(cic_bot_iot_dir.glob("*.csv"))),
+                'files': len(parquet_files) + len(csv_files),
+                'parquet_files': len(parquet_files),
+                'csv_files': len(csv_files),
                 'description': 'Conjunto de dados CIC-BoT-IoT para detecção de ataques IoT e DDoS'
             }
+            # Verificação do ficheiro de features
+            features_file = cic_bot_iot_dir / "CICFlowMeter Features.csv"
+            if not features_file.exists():
+                available_datasets['cic_bot_iot']['features_csv_missing'] = True
+                available_datasets['cic_bot_iot']['features_csv_warning'] = "AVISO: Ficheiro 'CICFlowMeter Features.csv' em falta no diretório CIC-BoT-IoT. Algumas funcionalidades podem não ser extraídas corretamente."
+            else:
+                available_datasets['cic_bot_iot']['features_csv_missing'] = False
         return available_datasets
     
     def run_processor(self, processor_name, script_path):
