@@ -254,10 +254,10 @@ class DatasetIntegrator:
         if X_cic is not None:
             available_datasets.append((X_cic, y_cic, meta_cic))
 
-        # Load CIC-BoT-IoT dataset
-        X_cic_bot, y_cic_bot, meta_cic_bot = self.load_dataset("cic_bot_iot")
-        if X_cic_bot is not None:
-            available_datasets.append((X_cic_bot, y_cic_bot, meta_cic_bot))
+        # Load NF-BoT-IoT dataset
+        X_nf_bot, y_nf_bot, meta_nf_bot = self.load_dataset("nf_bot_iot")
+        if X_nf_bot is not None:
+            available_datasets.append((X_nf_bot, y_nf_bot, meta_nf_bot))
 
         if not available_datasets:
             raise ValueError("No processed datasets found for integration")
