@@ -49,7 +49,7 @@ class BoTIoTProcessor:
             logger.error(f"Nenhum ficheiro Parquet encontrado em {self.input_dir}")
             print(f"ERRO: Nenhum ficheiro Parquet encontrado em {self.input_dir}")
             return False
-        logger.info(f"A carregar {parquet_file.name} com Dask")
+        logger.info(f"A carregar CIC-BoT-IoT com Dask (ficheiro: {parquet_file.name})")
         ddf = dd.read_parquet(parquet_file)
         # Carregar nomes das features do CSV se existir
         feature_names = None
@@ -69,28 +69,40 @@ class BoTIoTProcessor:
         ]
         # Excluir colunas categóricas e o target do X
         feature_cols = [col for col in ddf.columns if col not in categorical_cols + ['attack']]
-        # Inicializar arrays para batches
-        X_batches = []
-        y_batches = []
+        import numpy as np
         n_samples = 0
         attack_count = 0
-        # Processar cada batch
+        batch_idx = 1
+        batch_files_X = []
+        batch_files_y = []
         for part in ddf.to_delayed():
             df = part.compute()
             X_batch = df[feature_cols].values
             y_batch = df['attack'].values if 'attack' in df.columns else np.zeros(len(df))
-            X_batches.append(X_batch)
-            y_batches.append(y_batch)
             n_samples += X_batch.shape[0]
             attack_count += int(np.sum(y_batch))
             logger.info(f"Batch processado: {X_batch.shape[0]} amostras")
-        # Concatenar todos os batches
-        import numpy as np
-        X = np.concatenate(X_batches, axis=0)
-        y = np.concatenate(y_batches, axis=0)
-        # Exportação compatível com pipeline
-        np.save(self.output_dir / "X_cic_bot_iot.npy", X)
-        np.save(self.output_dir / "y_cic_bot_iot.npy", y)
+            # Exportar batch
+            batch_X_file = self.output_dir / f"X_cic_bot_iot_batch_{batch_idx}.npy"
+            batch_y_file = self.output_dir / f"y_cic_bot_iot_batch_{batch_idx}.npy"
+            np.save(batch_X_file, X_batch)
+            np.save(batch_y_file, y_batch)
+            batch_files_X.append(str(batch_X_file))
+            batch_files_y.append(str(batch_y_file))
+            batch_idx += 1
+        # Exportar lista de ficheiros de batches
+        with open(self.output_dir / "X_cic_bot_iot_batches.txt", "w") as f:
+            f.write('\n'.join(batch_files_X))
+        with open(self.output_dir / "y_cic_bot_iot_batches.txt", "w") as f:
+            f.write('\n'.join(batch_files_y))
+        # Exportação agregada (opcional, se couber na RAM)
+        # try:
+        #     X = np.concatenate([np.load(f) for f in batch_files_X], axis=0)
+        #     y = np.concatenate([np.load(f) for f in batch_files_y], axis=0)
+        #     np.save(self.output_dir / "X_cic_bot_iot.npy", X)
+        #     np.save(self.output_dir / "y_cic_bot_iot.npy", y)
+        # except Exception as e:
+        #     logger.warning(f"Não foi possível exportar arrays agregados: {e}")
         # Exportar nomes das features
         if feature_names:
             with open(self.output_dir / "feature_names_cic_bot_iot.txt", "w") as f:
@@ -98,7 +110,7 @@ class BoTIoTProcessor:
         else:
             with open(self.output_dir / "feature_names_cic_bot_iot.txt", "w") as f:
                 f.write('\n'.join(feature_cols))
-        n_features = X.shape[1]
+        n_features = len(feature_cols)
         normal_count = int(n_samples - attack_count)
         attack_ratio = float(attack_count / n_samples) if n_samples > 0 else 0.0
         # Metadados completos
@@ -108,10 +120,9 @@ class BoTIoTProcessor:
             "colunas_features": feature_cols,
             "colunas_categoricas": [col for col in categorical_cols if col in ddf.columns],
             "alvo": "attack",
-            "dimensao": X.shape,
             "feature_names_file": "feature_names_cic_bot_iot.txt",
-            "array_file": "X_cic_bot_iot.npy",
-            "label_file": "y_cic_bot_iot.npy",
+            "batch_files_X": batch_files_X,
+            "batch_files_y": batch_files_y,
             "amostras": n_samples,
             "features": n_features,
             "amostras_ataque": attack_count,
@@ -122,8 +133,8 @@ class BoTIoTProcessor:
             json.dump(metadata, f, indent=2)
         # Validação dos ficheiros exportados
         missing_files = []
-        for fname in ["X_cic_bot_iot.npy", "y_cic_bot_iot.npy"]:
-            if not (self.output_dir / fname).exists():
+        for fname in batch_files_X + batch_files_y:
+            if not Path(fname).exists():
                 missing_files.append(fname)
         if missing_files:
             logger.error(f"Ficheiros de saída esperados em falta: {missing_files}")

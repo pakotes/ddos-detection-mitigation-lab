@@ -180,6 +180,7 @@ class CICDDoSProcessor:
         X_train_scaled, X_val_scaled, X_test_scaled, scaler = self.scale_features(X_train, X_val, X_test)
         # 8. Metadados
         metainfo = {
+            'dataset': 'cic_ddos',
             'formato_ficheiro': ext,
             'total_amostras': int(df.shape[0]),
             'amostras_pos_limpeza': int(df_subset.shape[0]),
