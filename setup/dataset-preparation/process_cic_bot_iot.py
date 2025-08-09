@@ -113,5 +113,14 @@ class BoTIoTProcessor:
             }
             with open(self.output_dir / "metadata_cic_bot_iot.json", "w") as f:
                 json.dump(metadata, f, indent=2)
+                # Validação dos ficheiros exportados
+                missing_files = []
+                for fname in ["X_cic_bot_iot.npy", "y_cic_bot_iot.npy"]:
+                    if not (self.output_dir / fname).exists():
+                        missing_files.append(fname)
+                if missing_files:
+                    logger.error(f"Ficheiros de saída esperados em falta: {missing_files}")
+                    print(f"ERRO: Ficheiros de saída esperados em falta: {missing_files}")
+                    return False
             logger.info(f"Processamento de CIC-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
             return True
