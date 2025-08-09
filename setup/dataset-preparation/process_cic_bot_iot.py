@@ -117,3 +117,14 @@ class BoTIoTProcessor:
         logger.info(f"Processamento de CIC-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
         print(f"Processamento de CIC-BoT-IoT concluído com sucesso. Amostras: {n_samples}, Features: {n_features}, Ataques: {attack_count}, Normais: {normal_count}, Percentagem ataque: {attack_ratio:.2%}")
         return True
+    
+# Bloco main para debug
+if __name__ == "__main__":
+    print("[DEBUG] Início do processamento CIC-BoT-IoT")
+    processor = BoTIoTProcessor()
+    print(f"[DEBUG] Diretório de entrada: {processor.input_dir}")
+    print(f"[DEBUG] Diretório de saída: {processor.output_dir}")
+    print(f"[DEBUG] Ficheiros Parquet encontrados: {list(processor.input_dir.glob('*.parquet'))}")
+    print(f"[DEBUG] Ficheiros CSV encontrados: {list(processor.input_dir.glob('*.csv'))}")
+    resultado = processor.process()
+    print(f"[DEBUG] Resultado do processamento: {resultado}")
