@@ -315,7 +315,7 @@ class DatasetIntegrator:
 
 def main():
     """Executa o pipeline de integração de datasets"""
-    print("Módulo de Integração de Datasets")
+    print("\nMódulo de Integração de Datasets")
     print("=" * 50)
 
     try:
