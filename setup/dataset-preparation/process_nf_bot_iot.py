@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class NFBoTIoTProcessor:
-    def __init__(self, input_dir=None, output_dir=None, chunksize=100000):
+    def __init__(self, input_dir=None, output_dir=None, chunksize=500000):
         if input_dir is None:
             self.input_dir = Path(__file__).parent / "NF-BoT-IoT-v3"
         else:
@@ -64,9 +64,9 @@ class NFBoTIoTProcessor:
                 'proto', 'flgs', 'state', 'smac', 'dmac', 'saddr', 'daddr', 'category', 'subcategory', 'stime', 'ltime'
             ]
             feature_cols = [col for col in chunk.columns if col not in categorical_cols + ['Label', 'Attack']]
-            X_batch = chunk[feature_cols].values
+            X_batch = chunk[feature_cols].values.astype(np.float32)
             # Usar Label como alvo (0=Benign, 1=Attack)
-            y_batch = chunk['Label'].values if 'Label' in chunk.columns else np.zeros(len(chunk))
+            y_batch = chunk['Label'].values.astype(np.float32) if 'Label' in chunk.columns else np.zeros(len(chunk), dtype=np.float32)
             # Recolher nomes dos ataques (excluindo 'Benign')
             if 'Attack' in chunk.columns:
                 attack_names.update([a for a in chunk['Attack'].unique() if a != 'Benign'])
